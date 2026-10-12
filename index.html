@@ -641,12 +641,13 @@
         <div class="campo"><label for="s-tel">Tu WhatsApp *</label><input type="tel" id="s-tel" inputmode="tel" maxlength="30" placeholder="299 123-4567" autocomplete="tel" /></div>
       </div>
       <div class="campo"><label for="s-aviso">Aviso u oferta (opcional)</label><input type="text" id="s-aviso" maxlength="160" /></div>
+      <input type="text" id="s-web" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" />
       <div class="acciones">
         <button type="button" class="btn btn-gris" data-cerrar>Cancelar</button>
         <button type="submit" class="btn btn-ocre">Enviar solicitud</button>
       </div>
       <div id="sol-resultado" hidden>
-        <p class="ayuda">Copiá este mensaje y mandalo por WhatsApp a quien administra el directorio.</p>
+        <p class="ayuda">No pudimos enviar la solicitud. Copiá este mensaje y mandalo por mail a quien administra el directorio.</p>
         <textarea id="sol-texto" readonly></textarea>
         <div class="acciones"><button type="button" class="btn btn-primario" id="sol-copiar">Copiar mensaje</button></div>
       </div>
@@ -1710,7 +1711,7 @@
       llenar($('#s-barrio'), [['', 'Elegí el barrio'], ...BARRIOS.map(x => [x, x])]);
       const val = (id, n) => $(id).value.trim().replace(/\s+/g, ' ').slice(0, n);
       ['#btn-comerciante', '#btn-publicar'].forEach(q => $(q).addEventListener('click', () => { err.hidden = true; res.hidden = true; Dlg.abrir(dlg); }));
-      f.addEventListener('submit', e => {
+      f.addEventListener('submit', async e => {
         e.preventDefault();
         const d = { local: val('#s-nombre', 80), rubro: $('#s-rubro').value, barrio: $('#s-barrio').value, dir: val('#s-dir', 120), hor: val('#s-horarios', 160), nombre: val('#s-contacto', 60), tel: val('#s-tel', 30), aviso: val('#s-aviso', 160) };
         const faltan = [];
@@ -1723,16 +1724,22 @@
         if (d.tel.replace(/\D/g, '').length < 8) faltan.push('un WhatsApp válido');
         if (faltan.length) { err.textContent = 'Falta completar: ' + faltan.join(', ') + '.'; err.hidden = false; err.scrollIntoView({ block: 'nearest' }); return; }
         err.hidden = true;
-        const msg = ['Hola, quiero publicar mi local en ' + CONFIG.nombreApp + '.', '',
-          'Local: ' + d.local, 'Rubro: ' + (CAT_LABEL.get(d.rubro) || d.rubro), 'Barrio: ' + d.barrio, 'Dirección: ' + d.dir,
-          'Horarios: ' + d.hor, d.aviso ? 'Aviso: ' + d.aviso : null, 'Contacto: ' + d.nombre + ' (' + d.tel + ')'].filter(x => x !== null).join('\n');
-        if (CONFIG.whatsappAdmin) {
-          window.open('https://wa.me/' + CONFIG.whatsappAdmin + '?text=' + encodeURIComponent(msg), '_blank', 'noopener');
-          Toast.mostrar('Abrimos WhatsApp para enviar tu solicitud.');
-          f.reset(); Dlg.cerrar(dlg);
-        } else {
+        const rubroTxt = CAT_LABEL.get(d.rubro) || d.rubro;
+        const msg = ['Local: ' + d.local, 'Rubro: ' + rubroTxt, 'Barrio: ' + d.barrio, 'Dirección: ' + d.dir, 'Horarios: ' + d.hor,
+          d.aviso ? 'Aviso: ' + d.aviso : null, 'Contacto: ' + d.nombre + ' (' + d.tel + ')'].filter(x => x !== null).join('\n');
+        const btn = f.querySelector('button[type="submit"]'), txtBtn = btn.textContent;
+        btn.disabled = true; btn.textContent = 'Enviando…';
+        try {
+          const r = await fetch('/api/solicitud', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ local: d.local, rubro: rubroTxt, barrio: d.barrio, dir: d.dir, hor: d.hor, aviso: d.aviso, nombre: d.nombre, tel: d.tel, web: $('#s-web').value })
+          });
+          if (!r.ok) throw new Error('http');
+          Toast.mostrar('Solicitud enviada. Te contactamos pronto.', { ms: 4000 });
+          f.reset(); res.hidden = true; Dlg.cerrar(dlg);
+        } catch {
           $('#sol-texto').value = msg; res.hidden = false; res.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        }
+        } finally { btn.disabled = false; btn.textContent = txtBtn; }
       });
       $('#sol-copiar').addEventListener('click', async () => {
         const t = $('#sol-texto');
