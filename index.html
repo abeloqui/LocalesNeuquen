@@ -793,7 +793,7 @@
     ['Electrónica', 'Electrónica / Celulares'], ['Deportes', 'Deportes / Outdoor'], ['Hogar', 'Hogar / Decoración'],
     ['Juguetería', 'Juguetería / Regalería'], ['Óptica', 'Óptica'], ['Floristería', 'Floristería / Plantas'],
     ['Lavandería', 'Lavandería / Tintorería'], ['Educación', 'Educación / Cursos'], ['Salud', 'Salud / Consultorios'],
-    ['Servicios', 'Servicios varios'],['Transporte', 'Remisses / Cursos'], ['Otros', 'Otros']
+    ['Servicios', 'Servicios varios'],['Transporte', 'Remisses'], ['Otros', 'Otros']
   ];
   const TIPOS = { local: 'Local comercial', feria: 'Feria / Puesto', servicio: 'Servicio' };
   const BARRIOS = ['Centro', 'Godoy', 'Novella', 'Belgrano', 'Cumelén', 'Canal V', 'San Lorenzo', 'Alta Barda', 'Bouquet Roldán', 'Islas Malvinas', 'Melipal', 'Valentina Norte', 'Gran Neuquén', 'Confluencia'];
@@ -801,30 +801,7 @@
   const CAT_LABEL = new Map(CATEGORIAS);
   const TIPOS_SERVICIO = ['Belleza', 'Servicios', 'Autopartes', 'Lavandería', 'Educación', 'Salud', 'Óptica'];
 
-  const DATOS_INICIALES = [
-    { id: 1, nombre: "Verdulería Don Pepe", categoria: "Verdulería", barrio: "Godoy", direccion: "Godoy 1850", lat: -38.9485, lng: -68.0850, horarios: { lun_vie: "08:00-13:00 y 17:00-20:30", sab: "08:00-14:00", dom: "Cerrado" }, aviso: "Hoy abrimos de corrido hasta las 14 hs" },
-    { id: 2, nombre: "Farmacia del Centro", categoria: "Farmacia", barrio: "Centro", direccion: "Av. Argentina 320", lat: -38.9515, lng: -68.0595, horarios: { lun_vie: "09:00-13:00 y 16:30-20:00", sab: "09:00-13:00", dom: "Cerrado" }, aviso: null },
-    { id: 3, nombre: "Ferretería El Tornillo", categoria: "Ferretería", barrio: "Belgrano", direccion: "Belgrano 1450", lat: -38.9550, lng: -68.0780, horarios: { lun_vie: "08:30-12:30 y 16:00-19:30", sab: "08:30-13:00", dom: "Cerrado" }, aviso: "Amplio stock de pinturas" },
-    { id: 4, nombre: "Almacén La Esquina", categoria: "Almacén", barrio: "Cumelén", direccion: "Av. del Trabajador 2100", lat: -38.9460, lng: -68.0980, horarios: { lun_vie: "07:00-22:00", sab: "07:00-22:00", dom: "08:00-13:00" }, aviso: null },
-    { id: 5, nombre: "Panadería Los Hornos", categoria: "Panadería", barrio: "Canal V", direccion: "Canal V y Godoy", lat: -38.9420, lng: -68.0880, horarios: { lun_vie: "06:30-13:00 y 16:00-20:00", sab: "06:30-13:00", dom: "07:00-12:00" }, aviso: "Facturas calientes todas las mañanas" },
-    { id: 6, nombre: "Kiosco 24 hs El Paso", categoria: "Almacén", barrio: "San Lorenzo", direccion: "San Lorenzo 780", lat: -38.9580, lng: -68.0950, horarios: { lun_vie: "00:00-23:59", sab: "00:00-23:59", dom: "00:00-23:59" }, aviso: "Abierto las 24 horas" },
-    { id: 7, nombre: "Boutique Luna", categoria: "Indumentaria", barrio: "Centro", direccion: "Av. Argentina 890", lat: -38.9528, lng: -68.0610, horarios: { lun_vie: "10:00-13:30 y 17:00-21:00", sab: "10:00-14:00", dom: "Cerrado" }, aviso: null },
-    { id: 8, nombre: "Feria de Emprendedores", categoria: "Feria", barrio: "Islas Malvinas", direccion: "Plaza Islas Malvinas", lat: -38.9440, lng: -68.0660, horarios: { lun_vie: "Cerrado", sab: "10:00-18:00", dom: "10:00-17:00" }, aviso: "Sábados y domingos · Productos locales" },
-    { id: 9, nombre: "Café del Alto", categoria: "Gastronomía", barrio: "Centro", direccion: "San Martín 450", lat: -38.9505, lng: -68.0580, horarios: { lun_vie: "08:00-21:00", sab: "09:00-21:00", dom: "10:00-18:00" }, aviso: null },
-    { id: 10, nombre: "Ropa Urbana NQN", categoria: "Indumentaria", barrio: "Novella", direccion: "Pérez Novella 1100", lat: -38.9520, lng: -68.0890, horarios: { lun_vie: "10:00-13:00 y 17:00-20:30", sab: "10:00-14:00", dom: "Cerrado" }, aviso: null },
-    { id: 11, nombre: "Carnicería El Buen Corte", categoria: "Carnicería", barrio: "Godoy", direccion: "Godoy 2100", lat: -38.9498, lng: -68.0905, horarios: { lun_vie: "08:00-13:00 y 17:00-20:00", sab: "08:00-14:00", dom: "Cerrado" }, aviso: null },
-    { id: 12, nombre: "Librería Papel & Tinta", categoria: "Librería", barrio: "Belgrano", direccion: "Belgrano 800", lat: -38.9540, lng: -68.0750, horarios: { lun_vie: "09:00-13:00 y 16:00-19:30", sab: "09:00-13:00", dom: "Cerrado" }, aviso: null },
-    { id: 13, nombre: "Peluquería Estilo", categoria: "Belleza", barrio: "Cumelén", direccion: "Av. del Trabajador 1850", lat: -38.9470, lng: -68.0960, horarios: { lun_vie: "09:00-13:00 y 16:00-20:00", sab: "09:00-14:00", dom: "Cerrado" }, aviso: "Turnos por WhatsApp" },
-    { id: 14, nombre: "Feria del Trueque", categoria: "Feria", barrio: "Melipal", direccion: "Plaza Melipal", lat: -38.9360, lng: -68.0980, horarios: { lun_vie: "Cerrado", sab: "09:00-14:00", dom: "Cerrado" }, aviso: "Solo sábados de mañana" },
-    { id: 15, nombre: "Rotisería Doña Rosa", categoria: "Gastronomía", barrio: "Alta Barda", direccion: "Alta Barda 280", lat: -38.9410, lng: -68.0730, horarios: { lun_vie: "11:00-15:00 y 19:00-23:00", sab: "11:00-15:00 y 19:00-23:30", dom: "11:00-15:00" }, aviso: "Hay menú del día" },
-    { id: 16, nombre: "Zapatos del Sur", categoria: "Calzado", barrio: "Centro", direccion: "Av. Argentina 1100", lat: -38.9535, lng: -68.0605, horarios: { lun_vie: "10:00-13:30 y 17:00-20:30", sab: "10:00-14:00", dom: "Cerrado" }, aviso: null },
-    { id: 17, nombre: "Pet Shop Amigos", categoria: "Mascotas", barrio: "Novella", direccion: "Novella 420", lat: -38.9510, lng: -68.0860, horarios: { lun_vie: "09:00-13:00 y 16:30-20:00", sab: "09:00-13:00", dom: "Cerrado" }, aviso: "Vacunación los sábados" },
-    { id: 18, nombre: "Celulares NQN", categoria: "Electrónica", barrio: "Centro", direccion: "San Martín 780", lat: -38.9510, lng: -68.0575, horarios: { lun_vie: "10:00-13:30 y 17:00-21:00", sab: "10:00-14:00", dom: "Cerrado" }, aviso: null },
-    { id: 19, nombre: "Deportes Patagonia", categoria: "Deportes", barrio: "Belgrano", direccion: "Belgrano 1200", lat: -38.9545, lng: -68.0770, horarios: { lun_vie: "10:00-13:00 y 16:30-20:00", sab: "10:00-14:00", dom: "Cerrado" }, aviso: null },
-    { id: 20, nombre: "Florería Primavera", categoria: "Floristería", barrio: "Islas Malvinas", direccion: "Islas Malvinas 210", lat: -38.9435, lng: -68.0670, horarios: { lun_vie: "09:00-13:00 y 16:00-20:00", sab: "09:00-14:00", dom: "09:00-13:00" }, aviso: "Ramos frescos" },
-    { id: 21, nombre: "Óptica Visión Clara", categoria: "Óptica", barrio: "Centro", direccion: "Av. Argentina 560", lat: -38.9520, lng: -68.0590, horarios: { lun_vie: "09:30-13:00 y 16:30-20:00", sab: "09:30-13:00", dom: "Cerrado" }, aviso: null },
-    { id: 22, nombre: "Lavadero Express", categoria: "Lavandería", barrio: "Godoy", direccion: "Godoy 1600", lat: -38.9480, lng: -68.0870, horarios: { lun_vie: "08:00-13:00 y 16:00-20:00", sab: "08:00-14:00", dom: "Cerrado" }, aviso: "Retiro y entrega a domicilio" }
-  ];
+
 
   /* ===================================================================
      1. UTILIDADES
