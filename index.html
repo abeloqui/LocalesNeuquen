@@ -88,7 +88,7 @@
     html {
       font-size: 16px;
       -webkit-text-size-adjust: 100%;
-      -webkit-tap-highlight-color: transparent;
+      -webkit-tap-highlight-color: parent;
       height: 100%;
     }
     body {
@@ -114,7 +114,7 @@
     .skip {
       position: absolute; left: .75rem; top: -4rem; z-index: 5000;
       background: var(--accent); color: #fff; padding: .6rem 1rem; border-radius: 999px;
-      text-decoration: none; font-weight: 600; transition: top .2s;
+      text-decoration: none; font-weight: 600; ition: top .2s;
     }
     .skip:focus { top: calc(.75rem + var(--safe-t)); }
 
@@ -140,7 +140,7 @@
     .logo h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: -.03em; white-space: nowrap; }
     .logo small { font-size: .7rem; color: var(--text-2); font-weight: 500; white-space: nowrap; }
     .search { flex: 1 1 140px; min-width: 0; position: relative; }
-    .search .ico { position: absolute; left: .75rem; top: 50%; transform: translateY(-50%); color: var(--text-2); pointer-events: none; }
+    .search .ico { position: absolute; left: .75rem; top: 50%; form: translateY(-50%); color: var(--text-2); pointer-events: none; }
     .header-actions { display: flex; align-items: center; gap: .4rem; flex: none; margin-left: auto; }
 
     /* Móvil: logo + botones en fila 1, búsqueda a ancho completo en fila 2 */
@@ -784,17 +784,48 @@
     claves: { datos: 'locales_neuquen_comercios', favoritos: 'locales_neuquen_favoritos', sesion: 'locales_neuquen_admin' }
   };
 
-  const CATEGORIAS = [
-    ['Indumentaria', 'Indumentaria / Ropa'], ['Calzado', 'Calzado'], ['Gastronomía', 'Gastronomía / Café'],
-    ['Verdulería', 'Verdulería'], ['Farmacia', 'Farmacia'], ['Ferretería', 'Ferretería'],
-    ['Feria', 'Feria / Emprendimientos'], ['Almacén', 'Almacén / Kiosco'], ['Panadería', 'Panadería / Confitería'],
-    ['Carnicería', 'Carnicería'], ['Librería', 'Librería / Papelería'], ['Belleza', 'Belleza / Peluquería'],
-    ['Mascotas', 'Mascotas / Veterinaria'], ['Autopartes', 'Autopartes / Taller'], ['Construcción', 'Construcción / Materiales'],
-    ['Electrónica', 'Electrónica / Celulares'], ['Deportes', 'Deportes / Outdoor'], ['Hogar', 'Hogar / Decoración'],
-    ['Juguetería', 'Juguetería / Regalería'], ['Óptica', 'Óptica'], ['Floristería', 'Floristería / Plantas'],
-    ['Lavandería', 'Lavandería / Tintorería'], ['Educación', 'Educación / Cursos'],['Transporte' , 'Transporte'] , ['Salud', 'Salud / Consultorios'],
-    ['Servicios', 'Servicios varios'],['Otros', 'Otros']
-  ];
+const CATEGORIAS = [
+  // Comercios y Alimentos
+  ['Almacén', 'Almacén / Kiosco'],
+  ['Carnicería', 'Carnicería'],
+  ['Gastronomía', 'Gastronomía / Café'],
+  ['Panadería', 'Panadería / Confitería'],
+  ['Verdulería', 'Verdulería'],
+  
+  // Indumentaria y Cuidado Personal
+  ['Belleza', 'Belleza / Peluquería'],
+  ['Calzado', 'Calzado'],
+  ['Indumentaria', 'Indumentaria / Ropa'],
+  
+  // Servicios y Movilidad
+  ['Educación', 'Educación / Cursos'],
+  ['Salud', 'Salud / Consultorios'],
+  ['Servicios', 'Servicios varios'],
+  ['Transporte', 'Transporte / Logística'], // Agregado/mejorado
+  
+  // Hogar y Reparaciones
+  ['Autopartes', 'Autopartes / Taller'],
+  ['Construcción', 'Construcción / Materiales'],
+  ['Ferretería', 'Ferretería'],
+  ['Hogar', 'Hogar / Decoración'],
+  ['Lavandería', 'Lavandería / Tintorería'],
+  
+  // Salud y Especialidades
+  ['Farmacia', 'Farmacia'],
+  ['Mascotas', 'Mascotas / Veterinaria'],
+  ['Óptica', 'Óptica'],
+  
+  // Entretenimiento y Tecnología
+  ['Deportes', 'Deportes / Outdoor'],
+  ['Electrónica', 'Electrónica / Celulares'],
+  ['Juguetería', 'Juguetería / Regalería'],
+  ['Librería', 'Librería / Papelería'],
+  
+  // Otros
+  ['Feria', 'Feria / Emprendimientos'],
+  ['Floristería', 'Floristería / Plantas'],
+  ['Otros', 'Otros']
+];
   const TIPOS = { local: 'Local comercial', feria: 'Feria / Puesto', servicio: 'Servicio' };
   const BARRIOS = [
   '14 de Octubre / Copol',
