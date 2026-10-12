@@ -1,0 +1,1765 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="description" content="Directorio comunitario libre de negocios, ferias y locales de Neuquén. Filtrá por rubro y horario. Sin rastreo." />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+  <title>Locales Neuquén – Negocios, ferias y comercios</title>
+
+  <!-- Leaflet CSS local; si falla, cae al CDN -->
+  <link rel="stylesheet" href="leaflet.css"
+        onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'" />
+
+  <style>
+    /* =========================================================
+       1. TOKENS (claro / oscuro)
+       ========================================================= */
+    :root {
+      color-scheme: light dark;
+      --bg: #f2f2f7;
+      --surface: #ffffff;
+      --fill: rgba(118, 118, 128, 0.12);
+      --fill-strong: rgba(118, 118, 128, 0.2);
+      --text: #1c1c1e;
+      --text-2: #5f5f64;           /* contraste AA sobre blanco */
+      --sep: rgba(60, 60, 67, 0.16);
+      --accent: #0a62d6;           /* relleno de botones (AA con texto blanco) */
+      --accent-hover: #0853b4;
+      --accent-text: #0a62d6;
+      --accent-soft: rgba(10, 98, 214, 0.1);
+      --ok: #1e7b34;   --ok-bg: rgba(52, 199, 89, 0.17);
+      --warn: #a84a00; --warn-bg: rgba(255, 149, 0, 0.18);
+      --bad: #c4001a;  --bad-bg: rgba(255, 59, 48, 0.12);
+      --pin-ok: #34c759; --pin-warn: #ff9500; --pin-bad: #ff3b30;
+      --fav: #ff2d55;
+      --glass: rgba(255, 255, 255, 0.78);
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.05), 0 1px 3px rgba(0,0,0,.04);
+      --shadow: 0 6px 24px rgba(0,0,0,.08), 0 1px 4px rgba(0,0,0,.05);
+      --shadow-lg: 0 18px 50px rgba(0,0,0,.2);
+      --r-lg: 20px; --r: 16px; --r-sm: 12px;
+      --ease: cubic-bezier(.32, .72, 0, 1);
+      --safe-t: env(safe-area-inset-top, 0px);
+      --safe-b: env(safe-area-inset-bottom, 0px);
+      --safe-l: env(safe-area-inset-left, 0px);
+      --safe-r: env(safe-area-inset-right, 0px);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #000000;
+        --surface: #1c1c1e;
+        --fill: rgba(118, 118, 128, 0.24);
+        --fill-strong: rgba(118, 118, 128, 0.36);
+        --text: #f5f5f7;
+        --text-2: #a1a1a6;
+        --sep: rgba(84, 84, 88, 0.6);
+        --accent: #0b6fe0;
+        --accent-hover: #2a85ee;
+        --accent-text: #64a8ff;
+        --accent-soft: rgba(100, 168, 255, 0.16);
+        --ok: #46d26a;   --ok-bg: rgba(52, 199, 89, 0.2);
+        --warn: #ffb340; --warn-bg: rgba(255, 149, 0, 0.22);
+        --bad: #ff6b60;  --bad-bg: rgba(255, 59, 48, 0.22);
+        --fav: #ff5c7c;
+        --glass: rgba(28, 28, 30, 0.78);
+        --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+        --shadow: 0 6px 24px rgba(0,0,0,.5);
+        --shadow-lg: 0 18px 50px rgba(0,0,0,.7);
+      }
+      .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.9) saturate(.8); }
+      .leaflet-container { background: #1c1c1e; }
+    }
+
+    /* =========================================================
+       2. BASE
+       ========================================================= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    [hidden] { display: none !important; }
+    html {
+      font-size: 16px;
+      -webkit-text-size-adjust: 100%;
+      -webkit-tap-highlight-color: transparent;
+      height: 100%;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.4;
+      height: 100%;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    button { font: inherit; color: inherit; cursor: pointer; border: none; background: none; }
+    a { color: var(--accent-text); }
+    :focus-visible { outline: 3px solid var(--accent-text); outline-offset: 2px; border-radius: 6px; }
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+    .skip {
+      position: absolute; left: .75rem; top: -4rem; z-index: 5000;
+      background: var(--accent); color: #fff; padding: .6rem 1rem; border-radius: 999px;
+      text-decoration: none; font-weight: 600; transition: top .2s;
+    }
+    .skip:focus { top: calc(.75rem + var(--safe-t)); }
+
+    .ico { display: inline-flex; width: 1.15em; height: 1.15em; flex: none; }
+    .ico svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* =========================================================
+       3. CABECERA
+       ========================================================= */
+    .app-header {
+      flex: none;
+      z-index: 1000;
+      background: var(--glass);
+      -webkit-backdrop-filter: saturate(180%) blur(22px);
+      backdrop-filter: saturate(180%) blur(22px);
+      border-bottom: .5px solid var(--sep);
+      padding: calc(.55rem + var(--safe-t)) var(--safe-r) .6rem var(--safe-l);
+    }
+    .header-inner { max-width: 1600px; margin: 0 auto; padding: 0 1rem; display: flex; flex-direction: column; gap: .5rem; }
+    .header-top { display: flex; align-items: center; gap: .7rem; }
+    .logo { display: flex; align-items: center; gap: .45rem; flex: none; }
+    .logo .ico { width: 1.5rem; height: 1.5rem; color: var(--accent-text); }
+    .logo h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: -.03em; white-space: nowrap; }
+    .logo small { font-size: .7rem; color: var(--text-2); font-weight: 500; white-space: nowrap; }
+    @media (max-width: 640px) { .logo small { display: none; } }
+    @media (max-width: 420px) { .logo h1 { font-size: 1rem; } .logo .ico { display: none; } }
+    .search { flex: 1; min-width: 0; position: relative; }
+    .search .ico { position: absolute; left: .75rem; top: 50%; transform: translateY(-50%); color: var(--text-2); pointer-events: none; }
+
+    input[type="search"], input[type="text"], input[type="password"], input[type="tel"], select {
+      font: inherit; font-size: 1rem; /* 16px evita el zoom automático de iOS */
+      width: 100%; min-width: 0; min-height: 40px;
+      padding: .5rem .85rem;
+      border: none; border-radius: var(--r-sm);
+      background: var(--fill); color: var(--text);
+      transition: background .2s, box-shadow .2s;
+    }
+    .search input { padding-left: 2.3rem; border-radius: 999px; }
+    input::placeholder { color: var(--text-2); opacity: .8; }
+    input:focus, select:focus { outline: none; background: var(--surface); box-shadow: 0 0 0 3.5px var(--accent-soft), 0 0 0 1.5px var(--accent); }
+    input[aria-invalid="true"] { box-shadow: 0 0 0 1.5px var(--bad); }
+    select {
+      appearance: none; -webkit-appearance: none; cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%238E8E93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M1.5 1.5L6 6l4.500-4.500'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right .75rem center;
+      padding-right: 2rem;
+    }
+
+    .filtros {
+      display: flex; gap: .4rem; overflow-x: auto; scrollbar-width: none;
+      padding: 2px 1px 3px; margin: 0 -1rem; padding-inline: 1rem;
+      -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; scroll-padding-inline: 1rem;
+    }
+    .filtros::-webkit-scrollbar { display: none; }
+    .filtros > * { flex: none; scroll-snap-align: start; }
+    .filtros select { width: auto; min-width: 9.5rem; font-size: .88rem; min-height: 36px; padding-block: .4rem; border-radius: 999px; }
+    .filtros select.activo { background-color: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
+    .chip {
+      display: inline-flex; align-items: center; gap: .35rem;
+      min-height: 36px; padding: .4rem .85rem; border-radius: 999px;
+      background: var(--fill); font-size: .88rem; font-weight: 600; white-space: nowrap;
+      transition: background .2s, color .2s, transform .15s var(--ease);
+    }
+    .chip:active { transform: scale(.95); }
+    .chip[aria-pressed="true"] { background: var(--accent); color: #fff; }
+    .chip[aria-busy="true"] { opacity: .6; pointer-events: none; }
+    .chip .n { font-variant-numeric: tabular-nums; opacity: .85; }
+    .chip-limpiar { color: var(--accent-text); background: transparent; }
+
+    /* =========================================================
+       4. BOTONES
+       ========================================================= */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
+      min-height: 36px; padding: .45rem .95rem;
+      border-radius: 999px; font-size: .88rem; font-weight: 600; line-height: 1.1;
+      text-decoration: none; white-space: nowrap;
+      transition: background .2s, transform .15s var(--ease), opacity .2s;
+    }
+    .btn:active { transform: scale(.95); }
+    .btn[disabled] { opacity: .5; pointer-events: none; }
+    .btn-primario { background: var(--accent); color: #fff; }
+    .btn-tint { background: var(--accent-soft); color: var(--accent-text); }
+    .btn-gris { background: var(--fill); color: var(--text); }
+    .btn-peligro { background: var(--bad-bg); color: var(--bad); }
+    .btn-peligro-fill { background: var(--bad); color: #fff; }
+    @media (hover: hover) {
+      .btn-primario:hover { background: var(--accent-hover); }
+      .btn-tint:hover { background: var(--fill-strong); }
+      .btn-gris:hover { background: var(--fill-strong); }
+      .chip:hover { background: var(--fill-strong); }
+      .chip[aria-pressed="true"]:hover { background: var(--accent-hover); }
+    }
+    @media (pointer: coarse) {
+      .btn, .chip, .filtros select, input, select { min-height: 44px; }
+    }
+    /* leaflet.css fuerza color en `.leaflet-container a`; se restablece para los enlaces-botón dentro del popup */
+    .leaflet-container a.btn { color: var(--text); }
+    .leaflet-container a.btn-primario { color: #fff; }
+    .leaflet-container a.btn-tint { color: var(--accent-text); }
+    .btn-admin { flex: none; background: var(--fill); color: var(--accent-text); }
+    .btn-admin[data-logueado="true"] { background: var(--accent); color: #fff; }
+
+    /* =========================================================
+       5. LAYOUT PRINCIPAL (pantalla dividida / vistas móviles)
+       ========================================================= */
+    main {
+      flex: 1; min-height: 0;
+      display: flex; gap: 1rem;
+      width: 100%; max-width: 1600px; margin: 0 auto;
+      padding: .75rem 1rem calc(.75rem + var(--safe-b));
+      padding-left: max(1rem, var(--safe-l)); padding-right: max(1rem, var(--safe-r));
+    }
+    .lista-wrap { flex: 0 0 clamp(340px, 34vw, 440px); min-height: 0; display: flex; flex-direction: column; gap: .5rem; }
+    .mapa-wrap {
+      flex: 1; min-width: 0; position: relative;
+      border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow); background: var(--fill);
+      isolation: isolate;
+    }
+    #map { position: absolute; inset: 0; z-index: 1; }
+    main.sin-mapa .mapa-wrap, main.sin-mapa .vista-switch { display: none; }
+    main.sin-mapa .lista-wrap { flex: 1 1 auto; max-width: 760px; margin: 0 auto; }
+
+    .mapa-estado {
+      position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; text-align: center;
+      padding: 1.5rem; color: var(--text-2); font-size: .92rem; background: var(--fill);
+    }
+    .mapa-estado[data-modo="aviso"] {
+      inset: .75rem 4rem auto .75rem; display: flex; background: var(--glass); color: var(--text);
+      -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-radius: var(--r-sm);
+      padding: .6rem .85rem; font-size: .82rem; box-shadow: var(--shadow-sm); z-index: 800; justify-content: center;
+    }
+    .mapa-estado p { max-width: 32ch; line-height: 1.45; }
+    .mapa-estado[data-modo="aviso"] p { max-width: none; }
+    .mapa-estado .btn { margin-top: .75rem; }
+
+    .lista-header { display: flex; justify-content: space-between; align-items: baseline; padding: 0 .35rem; font-size: .85rem; color: var(--text-2); font-weight: 500; }
+    #contador { font-weight: 650; color: var(--text); }
+    .lista-scroll {
+      flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: var(--fill-strong) transparent;
+      margin: 0 -.5rem; padding: 2px .5rem 0;
+    }
+    .lista { list-style: none; display: flex; flex-direction: column; gap: .65rem; }
+
+    /* ----- Vista móvil: Lista | Mapa ----- */
+    .vista-switch {
+      display: none; position: fixed; z-index: 1500; left: 50%; transform: translateX(-50%);
+      bottom: calc(14px + var(--safe-b));
+      padding: 3px; gap: 2px; border-radius: 999px;
+      background: var(--glass); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+      box-shadow: var(--shadow), 0 0 0 .5px var(--sep);
+    }
+    .vista-switch button {
+      display: inline-flex; align-items: center; gap: .4rem; min-height: 40px; min-width: 6.2rem; justify-content: center;
+      padding: .4rem 1.1rem; border-radius: 999px; font-weight: 600; font-size: .92rem; color: var(--text-2);
+      transition: background .25s var(--ease), color .25s;
+    }
+    .vista-switch button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+
+    @media (max-width: 767px) {
+      main { padding: .5rem .75rem 0; gap: 0; }
+      .vista-switch { display: flex; }
+      .lista-wrap { flex: 1 1 auto; }
+      .lista-scroll { padding-bottom: calc(84px + var(--safe-b)); }
+      main[data-vista="lista"] .mapa-wrap { display: none; }
+      main[data-vista="mapa"] .lista-wrap { display: none; }
+      main[data-vista="mapa"] .mapa-wrap { margin-bottom: calc(.75rem + var(--safe-b)); border-radius: var(--r); }
+      main.sin-mapa .lista-wrap { max-width: none; }
+    }
+
+    /* =========================================================
+       6. TARJETAS
+       ========================================================= */
+    .card {
+      position: relative;
+      background: var(--surface); border-radius: var(--r); padding: .95rem 1rem .9rem;
+      box-shadow: var(--shadow-sm), 0 0 0 .5px var(--sep);
+      display: flex; flex-direction: column; gap: .35rem; cursor: pointer;
+      transition: box-shadow .25s var(--ease), transform .25s var(--ease);
+    }
+    @media (hover: hover) { .card:hover { box-shadow: var(--shadow), 0 0 0 .5px var(--sep); } }
+    .card:active { transform: scale(.992); }
+    .card.sel { box-shadow: 0 0 0 2px var(--accent), var(--shadow); }
+    .card-top { display: flex; gap: .5rem; align-items: flex-start; }
+    .card-info { flex: 1; min-width: 0; }
+    .card-nombre { font-size: 1.06rem; font-weight: 650; letter-spacing: -.022em; line-height: 1.25; }
+    .card-titulo { text-align: left; font: inherit; letter-spacing: inherit; padding: 0; border-radius: 6px; }
+    .card-meta { font-size: .8rem; color: var(--text-2); margin-top: 2px; }
+    .card-meta b { color: var(--accent-text); font-weight: 600; }
+    .fav {
+      flex: none; width: 40px; height: 40px; margin: -.3rem -.4rem 0 0; display: grid; place-items: center;
+      border-radius: 50%; color: var(--text-2); font-size: 1.3rem;
+      transition: background .2s, color .2s, transform .2s var(--ease);
+    }
+    .fav:active { transform: scale(.85); }
+    @media (hover: hover) { .fav:hover { background: var(--fill); } }
+    .fav[aria-pressed="true"] { color: var(--fav); }
+    .fav[aria-pressed="true"] svg { fill: currentColor; }
+    .fav.pop svg { animation: pop .45s var(--ease); }
+    @keyframes pop { 0% { transform: scale(.6); } 55% { transform: scale(1.3); } 100% { transform: scale(1); } }
+
+    .card-estado { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .55rem; font-size: .82rem; }
+    .badge { font-size: .72rem; font-weight: 700; padding: .22rem .6rem; border-radius: 999px; white-space: nowrap; }
+    .badge.abierto { background: var(--ok-bg); color: var(--ok); }
+    .badge.pronto  { background: var(--warn-bg); color: var(--warn); }
+    .badge.cerrado { background: var(--bad-bg); color: var(--bad); }
+    .detalle { color: var(--text-2); }
+    .dist { margin-left: auto; display: inline-flex; align-items: center; gap: .25rem; font-weight: 600; color: var(--text-2); font-variant-numeric: tabular-nums; }
+    .dist .ico { width: 1em; height: 1em; }
+    .card-dir, .card-hoy { font-size: .86rem; color: var(--text-2); display: flex; gap: .4rem; align-items: baseline; }
+    .card-hoy .ico, .card-dir .ico { transform: translateY(2px); }
+    .card-aviso { font-size: .84rem; background: var(--accent-soft); color: var(--accent-text); border-radius: 10px; padding: .45rem .65rem; margin-top: .2rem; line-height: 1.35; }
+    .card-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin-top: .5rem; }
+    .card-acciones .btn { flex: 1 1 auto; padding: .45rem .7rem; font-size: .84rem; gap: .3rem; }
+    .card-acciones .fav { flex: none; margin: 0; }
+    .vacio { list-style: none; text-align: center; padding: 2.2rem 1rem; color: var(--text-2); font-size: .95rem; display: flex; flex-direction: column; align-items: center; gap: .75rem; }
+    .vacio strong { color: var(--text); font-size: 1.05rem; }
+    .skeleton { height: 118px; border-radius: var(--r); background: linear-gradient(100deg, var(--fill) 30%, var(--fill-strong) 50%, var(--fill) 70%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+
+    .pie { text-align: center; padding: 1.1rem 1rem 1.4rem; font-size: .8rem; color: var(--text-2); display: flex; flex-direction: column; gap: .4rem; align-items: center; }
+    .pie button { color: var(--accent-text); font-weight: 600; font-size: .85rem; padding: .4rem .6rem; border-radius: 8px; }
+
+    /* =========================================================
+       7. MARCADORES Y POPUP (Leaflet)
+       ========================================================= */
+    .pin-wrap { background: none; border: none; }
+    .pin {
+      width: 28px; height: 28px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+      border: 2.5px solid #fff; box-shadow: 0 3px 10px rgba(0,0,0,.3);
+      display: grid; place-items: center; transition: transform .25s var(--ease), filter .2s;
+      transform-origin: 50% 100%;
+    }
+    .pin::after { content: ""; width: 8px; height: 8px; background: #fff; border-radius: 50%; transform: rotate(45deg); }
+    .pin.abierto { background: var(--pin-ok); }
+    .pin.pronto  { background: var(--pin-warn); }
+    .pin.cerrado { background: var(--pin-bad); }
+    .pin.cerrado::after { width: 10px; height: 3px; border-radius: 2px; }   /* forma distinta: no depende solo del color */
+    .pin.sel { transform: rotate(-45deg) scale(1.35); filter: drop-shadow(0 4px 8px rgba(0,0,0,.35)); }
+    .leaflet-marker-icon:focus-visible .pin { outline: 3px solid var(--accent-text); outline-offset: 3px; }
+    .yo-pulse { animation: pulse 2s ease-out infinite; }
+    @keyframes pulse { 0% { stroke-opacity: .6; } 100% { stroke-opacity: 0; } }
+
+    .leaflet-bar { border: none !important; border-radius: 12px !important; overflow: hidden; box-shadow: var(--shadow) !important; }
+    .leaflet-bar a {
+      width: 40px !important; height: 40px !important; line-height: 40px !important; font-size: 20px !important;
+      background: var(--glass) !important; color: var(--text) !important; border-bottom: .5px solid var(--sep) !important;
+      -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    }
+    .leaflet-top.leaflet-right .leaflet-control { margin-top: 12px; margin-right: 12px; }
+    .leaflet-container .leaflet-control-attribution { background: var(--glass); color: var(--text-2); font-size: 10px; border-radius: 8px 0 0 0; }
+    .leaflet-control-attribution a { color: var(--accent-text); }
+    .leaflet-popup-content-wrapper { border-radius: 16px !important; padding: 0 !important; background: var(--surface) !important; color: var(--text) !important; box-shadow: var(--shadow-lg) !important; }
+    .leaflet-popup-tip { background: var(--surface) !important; box-shadow: none !important; }
+    .leaflet-popup-content { margin: 0 !important; font-family: inherit; font-size: .9rem; }
+    .leaflet-container a.leaflet-popup-close-button { width: 32px; height: 32px; font-size: 22px; line-height: 32px; color: var(--text-2); }
+    .popup { position: relative; padding: .9rem 1rem; display: flex; flex-direction: column; gap: .3rem; width: min(290px, calc(100vw - 90px)); }
+    .popup .btn { padding: .4rem .75rem; font-size: .82rem; }
+    .popup .fav { position: absolute; top: .35rem; right: 2.1rem; margin: 0; width: 36px; height: 36px; }
+    .popup strong { font-size: 1.02rem; letter-spacing: -.02em; padding-right: 3.6rem; }
+    .popup .card-acciones { margin-top: .3rem; }
+
+    /* =========================================================
+       8. DIÁLOGOS (<dialog> nativo: foco atrapado + Esc)
+       ========================================================= */
+    dialog {
+      border: none; padding: 0; background: transparent; color: var(--text);
+      max-width: 100vw; max-height: 100dvh; overflow: visible;
+      margin: auto auto 0; width: 100%;
+    }
+    dialog::backdrop { background: rgba(0,0,0,.4); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+    dialog[open] { animation: sheet-up .38s var(--ease); }
+    dialog[open]::backdrop { animation: fade .3s ease; }
+    .modal {
+      background: var(--surface); color: var(--text);
+      border-radius: var(--r-lg) var(--r-lg) 0 0;
+      padding: 1.6rem 1.3rem calc(1.3rem + var(--safe-b));
+      max-height: 90dvh; overflow-y: auto; overscroll-behavior: contain;
+      box-shadow: var(--shadow-lg); position: relative;
+    }
+    .modal::before { content: ""; position: absolute; top: 7px; left: 50%; width: 38px; height: 5px; margin-left: -19px; border-radius: 3px; background: var(--fill-strong); }
+    @media (min-width: 560px) {
+      dialog { margin: auto; max-width: 440px; }
+      dialog.ancho { max-width: 560px; }
+      .modal { border-radius: var(--r-lg); padding: 1.6rem; }
+      .modal::before { display: none; }
+      dialog[open] { animation: scale-in .3s var(--ease); }
+    }
+    @keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+    @keyframes scale-in { from { transform: scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }
+    @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+    .modal h2 { font-size: 1.3rem; font-weight: 700; letter-spacing: -.03em; margin-bottom: .3rem; }
+    .modal .sub { font-size: .9rem; color: var(--text-2); margin-bottom: 1.1rem; line-height: 1.45; }
+    .campo { margin-bottom: .85rem; }
+    .campo label { display: block; font-size: .8rem; font-weight: 600; color: var(--text-2); margin: 0 0 .3rem .2rem; }
+    .campo .ayuda { font-size: .75rem; color: var(--text-2); margin: .25rem 0 0 .2rem; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+    @media (max-width: 480px) { .form-grid { grid-template-columns: 1fr; gap: 0; } }
+    .acciones { display: flex; gap: .55rem; justify-content: flex-end; flex-wrap: wrap; margin-top: 1rem; }
+    .error-box { background: var(--bad-bg); color: var(--bad); border-radius: var(--r-sm); padding: .6rem .8rem; font-size: .85rem; margin-bottom: .8rem; line-height: 1.4; }
+    .error-box ul { padding-left: 1.1rem; }
+
+    .admin-top { display: flex; flex-wrap: wrap; gap: .4rem; margin: .8rem 0; }
+    .admin-lista { list-style: none; display: flex; flex-direction: column; gap: .35rem; max-height: 44dvh; overflow-y: auto; }
+    .admin-item { display: flex; align-items: center; gap: .5rem; padding: .5rem .5rem .5rem .8rem; background: var(--fill); border-radius: var(--r-sm); font-size: .9rem; }
+    .admin-item .n { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .admin-item .n small { font-weight: 400; color: var(--text-2); }
+    .nota { font-size: .78rem; color: var(--text-2); background: var(--accent-soft); border-radius: var(--r-sm); padding: .55rem .75rem; line-height: 1.45; }
+
+    /* =========================================================
+       9. TOASTS
+       ========================================================= */
+    #toasts {
+      position: fixed; z-index: 4000; left: 50%; transform: translateX(-50%);
+      top: calc(.7rem + var(--safe-t)); width: min(92vw, 420px);
+      display: flex; flex-direction: column; gap: .5rem; pointer-events: none;
+    }
+    .toast {
+      background: var(--glass); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+      box-shadow: var(--shadow), 0 0 0 .5px var(--sep); border-radius: 16px; padding: .7rem 1rem;
+      font-size: .9rem; font-weight: 500; animation: toast-in .4s var(--ease); pointer-events: auto;
+    }
+    .toast.error { color: var(--bad); }
+    .toast.salir { opacity: 0; transform: translateY(-8px); transition: opacity .3s, transform .3s; }
+    @keyframes toast-in { from { opacity: 0; transform: translateY(-14px) scale(.96); } to { opacity: 1; transform: none; } }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+    }
+
+    /* =========================================================
+       ESTILO "ESTEPA Y RÍO": piedra, verde-azulado de río, ocre de barda
+       ========================================================= */
+    :root {
+      --bg: #ebeee8; --surface: #fcfcf9;
+      --text: #1b2522; --text-2: #55605a; --sep: rgba(27,37,34,.14);
+      --accent: #0d5c63; --accent-hover: #0a4a50; --accent-text: #0d5c63; --accent-soft: rgba(13,92,99,.1);
+      --ocre: #a5560f; --ocre-hover: #8a4609;
+      --glass: rgba(252,252,249,.86);
+      --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+      --r-lg: 18px; --r: 14px; --r-sm: 10px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-tema="claro"]) {
+        --bg: #0d1311; --surface: #16201e;
+        --text: #edf1ec; --text-2: #a4b0a9; --sep: rgba(200,215,208,.16);
+        --accent: #14808a; --accent-hover: #1b98a3; --accent-text: #72d2da; --accent-soft: rgba(114,210,218,.13);
+        --ocre: #b4601a; --ocre-hover: #c9701f;
+        --glass: rgba(22,32,30,.86);
+      }
+    }
+    .app-header {
+      background-image: linear-gradient(90deg, #b9622b 0 26%, #d9a441 26% 50%, #7d9a86 50% 76%, #0d5c63 76%);
+      background-size: 100% 5px; background-repeat: no-repeat; background-position: 0 100%;
+      padding-bottom: 5px;
+    }
+    .logo h1 { font-family: var(--serif); font-weight: 700; letter-spacing: -.01em; }
+    .logo .ico { color: var(--ocre); }
+    .card { border-radius: var(--r); }
+    .card-nombre { font-family: var(--serif); font-weight: 700; letter-spacing: 0; font-size: 1.1rem; }
+    .btn-ocre { background: var(--ocre); color: #fff; }
+    .btn-ocre:active { transform: scale(.95); }
+    @media (hover: hover) { .btn-ocre:hover { background: var(--ocre-hover); } }
+    .btn-publicar { flex: none; padding-inline: .9rem; gap: .35rem; font-weight: 650; }
+    .btn-publicar svg { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
+    .pie button { background: var(--ocre); color: #fff; padding: .6rem 1rem; border-radius: 999px; font-weight: 650; }
+    .sol-lead { color: var(--text-2); font-size: .92rem; line-height: 1.45; margin: .25rem 0 1.1rem; }
+    .modal h2 { font-family: var(--serif); font-weight: 700; }
+    #dlg-solicitud textarea, #sol-resultado textarea {
+      width: 100%; font: inherit; color: var(--text); background: var(--fill); border: 0;
+      border-radius: var(--r-sm); padding: .65rem .8rem; resize: vertical;
+    }
+    #sol-resultado { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--sep); }
+    #sol-resultado textarea { min-height: 11rem; font-size: .88rem; line-height: 1.45; }
+    #sol-resultado .ayuda { margin: 0 0 .5rem; }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#lista-comercios">Saltar al listado</a>
+
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="header-top">
+        <div class="logo">
+          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s7-6.2 7-12a7 7 0 10-14 0c0 5.800 7 12 7 12z"/><circle cx="12" cy="10" r="2.500"/></svg></span>
+          <h1>Locales Neuquén</h1>
+          <small>Negocios · Ferias · Comercios</small>
+        </div>
+        <div class="search" role="search">
+          <label for="busqueda" class="sr-only">Buscar por nombre, rubro, barrio o dirección</label>
+          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.500-3.500"/></svg></span>
+          <input type="search" id="busqueda" placeholder="Buscar…" autocomplete="off" enterkeyhint="search" />
+        </div>
+        <button type="button" class="btn btn-ocre btn-publicar" id="btn-publicar" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Publicar</button>
+        <button type="button" class="btn btn-admin" id="btn-admin" aria-haspopup="dialog">Admin</button>
+      </div>
+      <div class="filtros" role="group" aria-label="Filtros del listado" id="filtros">
+        <button type="button" class="chip" id="chip-cerca" aria-pressed="false"></button>
+        <button type="button" class="chip" id="chip-favs" aria-pressed="false"></button>
+        <label class="sr-only" for="f-rubro">Rubro</label><select id="f-rubro"></select>
+        <label class="sr-only" for="f-horario">Horario</label><select id="f-horario"></select>
+        <label class="sr-only" for="f-barrio">Barrio</label><select id="f-barrio"></select>
+        <label class="sr-only" for="f-tipo">Tipo</label><select id="f-tipo"></select>
+        <label class="sr-only" for="f-oferta">Ofertas</label><select id="f-oferta"></select>
+        <button type="button" class="chip chip-limpiar" id="btn-limpiar" hidden>Limpiar filtros</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="app" data-vista="lista">
+    <section class="lista-wrap" aria-label="Listado de comercios">
+      <div class="lista-header">
+        <span id="contador" role="status" aria-live="polite">Cargando…</span>
+        <span id="hora-actual"></span>
+      </div>
+      <div class="lista-scroll" id="lista-scroll">
+        <ul class="lista" id="lista-comercios" role="list" aria-busy="true"></ul>
+        <div class="pie">
+          <p>Directorio comunitario libre · Sin rastreo · Sin cuentas · Tus favoritos viven solo en este dispositivo</p>
+          <button type="button" id="btn-comerciante">¿Tenés un local o feria? Publicá o actualizá tu espacio</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="mapa-wrap" aria-label="Mapa">
+      <div id="map" role="region" aria-label="Mapa interactivo de comercios. La misma información está en el listado."></div>
+      <div class="mapa-estado" id="mapa-estado" data-modo="carga"><p>Cargando mapa…</p></div>
+    </section>
+
+    <div class="vista-switch" role="group" aria-label="Cambiar vista" id="vista-switch">
+      <button type="button" data-vista="lista" aria-pressed="true">Lista</button>
+      <button type="button" data-vista="mapa" aria-pressed="false">Mapa</button>
+    </div>
+  </main>
+
+  <div id="toasts" role="status" aria-live="polite"></div>
+
+  <!-- Login -->
+  <dialog id="dlg-login" aria-labelledby="login-t">
+    <form class="modal" id="form-login" autocomplete="on">
+      <h2 id="login-t">Acceso admin</h2>
+      <p class="sub">Solo para quien administra el directorio.</p>
+      <div class="campo"><label for="login-user">Usuario</label><input type="text" id="login-user" autocomplete="username" autocapitalize="none" required /></div>
+      <div class="campo"><label for="login-pass">Contraseña</label><input type="password" id="login-pass" autocomplete="current-password" required /></div>
+      <p class="error-box" id="login-error" role="alert" hidden></p>
+      <div class="acciones">
+        <button type="button" class="btn btn-gris" data-cerrar>Cancelar</button>
+        <button type="submit" class="btn btn-primario">Entrar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Panel admin -->
+  <dialog id="dlg-admin" class="ancho" aria-labelledby="admin-t">
+    <div class="modal">
+      <h2 id="admin-t">Panel admin</h2>
+      <p class="nota">Los cambios se guardan <b>solo en este navegador</b>. Para publicarlos para todos: exportá el JSON y subilo al sitio como <code>comercios.json</code>.</p>
+      <div class="admin-top">
+        <button type="button" class="btn btn-primario" id="btn-nuevo">+ Nuevo</button>
+        <button type="button" class="btn btn-gris" id="btn-export">Exportar</button>
+        <button type="button" class="btn btn-gris" id="btn-import">Importar</button>
+        <button type="button" class="btn btn-gris" id="btn-reset">Restablecer</button>
+        <input type="file" id="input-import" accept=".json,application/json" hidden />
+      </div>
+      <ul class="admin-lista" id="admin-lista" role="list"></ul>
+      <div class="acciones">
+        <button type="button" class="btn btn-peligro" id="btn-logout">Cerrar sesión</button>
+        <button type="button" class="btn btn-gris" data-cerrar>Listo</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Alta / edición -->
+  <dialog id="dlg-comercio" class="ancho" aria-labelledby="com-t">
+    <form class="modal" id="form-comercio" novalidate>
+      <h2 id="com-t">Nuevo comercio</h2>
+      <input type="hidden" id="c-id" />
+      <div class="error-box" id="c-errores" role="alert" hidden></div>
+      <div class="campo"><label for="c-nombre">Nombre *</label><input type="text" id="c-nombre" maxlength="80" required /></div>
+      <div class="form-grid">
+        <div class="campo"><label for="c-categoria">Rubro *</label><select id="c-categoria"></select></div>
+        <div class="campo"><label for="c-tipo">Tipo *</label><select id="c-tipo"></select></div>
+      </div>
+      <div class="form-grid">
+        <div class="campo"><label for="c-barrio">Barrio *</label><select id="c-barrio"></select></div>
+        <div class="campo"><label for="c-direccion">Dirección *</label><input type="text" id="c-direccion" maxlength="120" required /></div>
+      </div>
+      <div class="form-grid">
+        <div class="campo"><label for="c-lat">Latitud *</label><input type="text" id="c-lat" inputmode="decimal" placeholder="-38.95" required /></div>
+        <div class="campo"><label for="c-lng">Longitud *</label><input type="text" id="c-lng" inputmode="decimal" placeholder="-68.09" required /></div>
+      </div>
+      <div class="campo"><button type="button" class="btn btn-tint" id="btn-usar-ubic">Usar mi ubicación actual</button></div>
+      <div class="campo">
+        <label for="c-lv">Horario lunes a viernes *</label>
+        <input type="text" id="c-lv" placeholder="08:00-13:00 y 17:00-20:30" required />
+        <p class="ayuda">Formato 24 hs. Varios tramos con “y”. Escribí “Cerrado” si no abre. Pasadas de medianoche: 20:00-02:00.</p>
+      </div>
+      <div class="form-grid">
+        <div class="campo"><label for="c-sab">Sábado</label><input type="text" id="c-sab" placeholder="08:00-14:00 o Cerrado" /></div>
+        <div class="campo"><label for="c-dom">Domingo</label><input type="text" id="c-dom" placeholder="Cerrado" /></div>
+      </div>
+      <div class="campo">
+        <label for="c-tel">WhatsApp / teléfono (opcional)</label>
+        <input type="tel" id="c-tel" inputmode="tel" placeholder="299 123-4567" autocomplete="off" />
+      </div>
+      <div class="campo"><label for="c-aviso">Aviso u oferta del día (opcional)</label><input type="text" id="c-aviso" maxlength="160" /></div>
+      <div class="acciones">
+        <button type="button" class="btn btn-gris" data-cerrar>Cancelar</button>
+        <button type="submit" class="btn btn-primario">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-solicitud" class="ancho" aria-labelledby="sol-t">
+    <form class="modal" id="form-solicitud" novalidate>
+      <h2 id="sol-t">Publicá tu local</h2>
+      <p class="sol-lead">Completá los datos y los revisamos antes de sumarlo al mapa. Es gratis.</p>
+      <div class="error-box" id="s-errores" role="alert" hidden></div>
+      <div class="campo"><label for="s-nombre">Nombre del local o feria *</label><input type="text" id="s-nombre" maxlength="80" autocomplete="organization" /></div>
+      <div class="form-grid">
+        <div class="campo"><label for="s-rubro">Rubro *</label><select id="s-rubro"></select></div>
+        <div class="campo"><label for="s-barrio">Barrio *</label><select id="s-barrio"></select></div>
+      </div>
+      <div class="campo"><label for="s-dir">Dirección *</label><input type="text" id="s-dir" maxlength="120" autocomplete="street-address" /></div>
+      <div class="campo">
+        <label for="s-horarios">Horarios *</label>
+        <input type="text" id="s-horarios" maxlength="160" placeholder="Lun a vie 9 a 13 y 17 a 21, sáb 9 a 13" />
+      </div>
+      <div class="form-grid">
+        <div class="campo"><label for="s-contacto">Tu nombre *</label><input type="text" id="s-contacto" maxlength="60" autocomplete="name" /></div>
+        <div class="campo"><label for="s-tel">Tu WhatsApp *</label><input type="tel" id="s-tel" inputmode="tel" maxlength="30" placeholder="299 123-4567" autocomplete="tel" /></div>
+      </div>
+      <div class="campo"><label for="s-aviso">Aviso u oferta (opcional)</label><input type="text" id="s-aviso" maxlength="160" /></div>
+      <div class="acciones">
+        <button type="button" class="btn btn-gris" data-cerrar>Cancelar</button>
+        <button type="submit" class="btn btn-ocre">Enviar solicitud</button>
+      </div>
+      <div id="sol-resultado" hidden>
+        <p class="ayuda">Copiá este mensaje y mandalo por WhatsApp a quien administra el directorio.</p>
+        <textarea id="sol-texto" readonly></textarea>
+        <div class="acciones"><button type="button" class="btn btn-primario" id="sol-copiar">Copiar mensaje</button></div>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Confirmación / aviso genérico -->
+  <dialog id="dlg-confirm" aria-labelledby="conf-t" aria-describedby="conf-m">
+    <form method="dialog" class="modal">
+      <h2 id="conf-t"></h2>
+      <p class="sub" id="conf-m"></p>
+      <div class="acciones">
+        <button type="submit" value="cancel" class="btn btn-gris" id="conf-cancel">Cancelar</button>
+        <button type="submit" value="ok" class="btn btn-primario" id="conf-ok">Aceptar</button>
+      </div>
+    </form>
+  </dialog>
+
+<script>
+'use strict';
+(() => {
+  /* ===================================================================
+     0. CONFIGURACIÓN  (lo único que normalmente hace falta tocar)
+     =================================================================== */
+  const CONFIG = {
+    nombreApp: 'Locales Neuquén',
+    centro: [-38.95, -68.09],
+    zoom: 13,
+    zonaHoraria: 'America/Argentina/Buenos_Aires',   // Neuquén = UTC-3 sin horario de verano
+    fuenteDatos: 'comercios.json',                     // opcional: JSON publicado junto al HTML
+    whatsappAdmin: '',                                 // ej. '5492991234567' para el botón "Publicá tu espacio"
+    umbralCierraPronto: 45,                            // minutos
+    leaflet: { local: 'leaflet.js', cdn: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js' },
+    tiles: {
+      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    },
+    claves: { datos: 'locales_neuquen_comercios', favoritos: 'locales_neuquen_favoritos', sesion: 'locales_neuquen_admin' },
+    /* Credencial admin: hash SHA-256 de "sal:usuario:contraseña". Contraseña actual = la del original.
+       Para cambiarla: en la consola del navegador ejecutá  await __hash('sal','usuario','nueva')  y pegá el resultado.
+       OJO: es una barrera de interfaz, no seguridad real (ver notas). */
+    admin: { usuario: 'admin', sal: 'locales-nqn', hash: 'b610897dffa508d439d82e0f34454a9f46d81522a3b90348278fc134299f2d43' }
+  };
+
+  const CATEGORIAS = [
+    ['Indumentaria', 'Indumentaria / Ropa'], ['Calzado', 'Calzado'], ['Gastronomía', 'Gastronomía / Café'],
+    ['Verdulería', 'Verdulería'], ['Farmacia', 'Farmacia'], ['Ferretería', 'Ferretería'],
+    ['Feria', 'Feria / Emprendimientos'], ['Almacén', 'Almacén / Kiosco'], ['Panadería', 'Panadería / Confitería'],
+    ['Carnicería', 'Carnicería'], ['Librería', 'Librería / Papelería'], ['Belleza', 'Belleza / Peluquería'],
+    ['Mascotas', 'Mascotas / Veterinaria'], ['Autopartes', 'Autopartes / Taller'], ['Construcción', 'Construcción / Materiales'],
+    ['Electrónica', 'Electrónica / Celulares'], ['Deportes', 'Deportes / Outdoor'], ['Hogar', 'Hogar / Decoración'],
+    ['Juguetería', 'Juguetería / Regalería'], ['Óptica', 'Óptica'], ['Floristería', 'Floristería / Plantas'],
+    ['Lavandería', 'Lavandería / Tintorería'], ['Educación', 'Educación / Cursos'], ['Salud', 'Salud / Consultorios'],
+    ['Servicios', 'Servicios varios'], ['Otros', 'Otros']
+  ];
+  const TIPOS = { local: 'Local comercial', feria: 'Feria / Puesto', servicio: 'Servicio' };
+  const BARRIOS = ['Centro', 'Godoy', 'Novella', 'Belgrano', 'Cumelén', 'Canal V', 'San Lorenzo', 'Alta Barda', 'Bouquet Roldán', 'Islas Malvinas', 'Melipal', 'Valentina Norte', 'Gran Neuquén', 'Confluencia'];
+  const FRANJAS = [['', 'Cualquier horario'], ['abierto', 'Abierto ahora'], ['manana', 'Mañana (hasta 13 hs)'], ['tarde', 'Tarde (13–18 hs)'], ['noche', 'Noche (desde 18 hs)'], ['24hs', '24 horas']];
+  const CAT_LABEL = new Map(CATEGORIAS);
+  const TIPOS_SERVICIO = ['Belleza', 'Servicios', 'Autopartes', 'Lavandería', 'Educación', 'Salud', 'Óptica'];
+
+  const DATOS_INICIALES = [
+    { id: 1, nombre: "Verdulería Don Pepe", categoria: "Verdulería", barrio: "Godoy", direccion: "Godoy 1850", lat: -38.9485, lng: -68.0850, horarios: { lun_vie: "08:00-13:00 y 17:00-20:30", sab: "08:00-14:00", dom: "Cerrado" }, aviso: "Hoy abrimos de corrido hasta las 14 hs" },
+    { id: 2, nombre: "Farmacia del Centro", categoria: "Farmacia", barrio: "Centro", direccion: "Av. Argentina 320", lat: -38.9515, lng: -68.0595, horarios: { lun_vie: "09:00-13:00 y 16:30-20:00", sab: "09:00-13:00", dom: "Cerrado" }, aviso: null },
+    { id: 3, nombre: "Ferretería El Tornillo", categoria: "Ferretería", barrio: "Belgrano", direccion: "Belgrano 1450", lat: -38.9550, lng: -68.0780, horarios: { lun_vie: "08:30-12:30 y 16:00-19:30", sab: "08:30-13:00", dom: "Cerrado" }, aviso: "15% en pinturas hasta el viernes" },
+    { id: 4, nombre: "Almacén La Esquina", categoria: "Almacén", barrio: "Cumelén", direccion: "Av. del Trabajador 2100", lat: -38.9460, lng: -68.0980, horarios: { lun_vie: "07:00-22:00", sab: "07:00-22:00", dom: "08:00-13:00" }, aviso: null },
+    { id: 5, nombre: "Panadería Los Hornos", categoria: "Panadería", barrio: "Canal V", direccion: "Canal V y Godoy", lat: -38.9420, lng: -68.0880, horarios: { lun_vie: "06:30-13:00 y 16:00-20:00", sab: "06:30-13:00", dom: "07:00-12:00" }, aviso: "Facturas calientes todas las mañanas" },
+    { id: 6, nombre: "Kiosco 24 hs El Paso", categoria: "Almacén", barrio: "San Lorenzo", direccion: "San Lorenzo 780", lat: -38.9580, lng: -68.0950, horarios: { lun_vie: "00:00-23:59", sab: "00:00-23:59", dom: "00:00-23:59" }, aviso: "Abierto las 24 horas" },
+    { id: 7, nombre: "Boutique Luna", categoria: "Indumentaria", barrio: "Centro", direccion: "Av. Argentina 890", lat: -38.9528, lng: -68.0610, horarios: { lun_vie: "10:00-13:30 y 17:00-21:00", sab: "10:00-14:00", dom: "Cerrado" }, aviso: "Nueva colección otoño" },
+    { id: 8, nombre: "Feria de Emprendedores", categoria: "Feria", barrio: "Islas Malvinas", direccion: "Plaza Islas Malvinas", lat: -38.9440, lng: -68.0660, horarios: { lun_vie: "Cerrado", sab: "10:00-18:00", dom: "10:00-17:00" }, aviso: "Sábados y domingos · Productos locales" },
+    { id: 9, nombre: "Café del Alto", categoria: "Gastronomía", barrio: "Centro", direccion: "San Martín 450", lat: -38.9505, lng: -68.0580, horarios: { lun_vie: "08:00-21:00", sab: "09:00-21:00", dom: "10:00-18:00" }, aviso: null },
+    { id: 10, nombre: "Ropa Urbana NQN", categoria: "Indumentaria", barrio: "Novella", direccion: "Pérez Novella 1100", lat: -38.9520, lng: -68.0890, horarios: { lun_vie: "10:00-13:00 y 17:00-20:30", sab: "10:00-14:00", dom: "Cerrado" }, aviso: "2x1 en remeras seleccionadas" },
+    { id: 11, nombre: "Carnicería El Buen Corte", categoria: "Carnicería", barrio: "Godoy", direccion: "Godoy 2100", lat: -38.9498, lng: -68.0905, horarios: { lun_vie: "08:00-13:00 y 17:00-20:00", sab: "08:00-14:00", dom: "Cerrado" }, aviso: null },
+    { id: 12, nombre: "Librería Papel & Tinta", categoria: "Librería", barrio: "Belgrano", direccion: "Belgrano 800", lat: -38.9540, lng: -68.0750, horarios: { lun_vie: "09:00-13:00 y 16:00-19:30", sab: "09:00-13:00", dom: "Cerrado" }, aviso: null },
+    { id: 13, nombre: "Peluquería Estilo", categoria: "Belleza", barrio: "Cumelén", direccion: "Av. del Trabajador 1850", lat: -38.9470, lng: -68.0960, horarios: { lun_vie: "09:00-13:00 y 16:00-20:00", sab: "09:00-14:00", dom: "Cerrado" }, aviso: "Turnos por WhatsApp" },
+    { id: 14, nombre: "Feria del Trueque", categoria: "Feria", barrio: "Melipal", direccion: "Plaza Melipal", lat: -38.9360, lng: -68.0980, horarios: { lun_vie: "Cerrado", sab: "09:00-14:00", dom: "Cerrado" }, aviso: "Solo sábados de mañana" },
+    { id: 15, nombre: "Rotisería Doña Rosa", categoria: "Gastronomía", barrio: "Alta Barda", direccion: "Alta Barda 280", lat: -38.9410, lng: -68.0730, horarios: { lun_vie: "11:00-15:00 y 19:00-23:00", sab: "11:00-15:00 y 19:00-23:30", dom: "11:00-15:00" }, aviso: "Menú del día $4500" },
+    { id: 16, nombre: "Zapatos del Sur", categoria: "Calzado", barrio: "Centro", direccion: "Av. Argentina 1100", lat: -38.9535, lng: -68.0605, horarios: { lun_vie: "10:00-13:30 y 17:00-20:30", sab: "10:00-14:00", dom: "Cerrado" }, aviso: null },
+    { id: 17, nombre: "Pet Shop Amigos", categoria: "Mascotas", barrio: "Novella", direccion: "Novella 420", lat: -38.9510, lng: -68.0860, horarios: { lun_vie: "09:00-13:00 y 16:30-20:00", sab: "09:00-13:00", dom: "Cerrado" }, aviso: "Vacunación los sábados" },
+    { id: 18, nombre: "Celulares NQN", categoria: "Electrónica", barrio: "Centro", direccion: "San Martín 780", lat: -38.9510, lng: -68.0575, horarios: { lun_vie: "10:00-13:30 y 17:00-21:00", sab: "10:00-14:00", dom: "Cerrado" }, aviso: "Fundas desde $2500" },
+    { id: 19, nombre: "Deportes Patagonia", categoria: "Deportes", barrio: "Belgrano", direccion: "Belgrano 1200", lat: -38.9545, lng: -68.0770, horarios: { lun_vie: "10:00-13:00 y 16:30-20:00", sab: "10:00-14:00", dom: "Cerrado" }, aviso: null },
+    { id: 20, nombre: "Florería Primavera", categoria: "Floristería", barrio: "Islas Malvinas", direccion: "Islas Malvinas 210", lat: -38.9435, lng: -68.0670, horarios: { lun_vie: "09:00-13:00 y 16:00-20:00", sab: "09:00-14:00", dom: "09:00-13:00" }, aviso: "Ramos del día" },
+    { id: 21, nombre: "Óptica Visión Clara", categoria: "Óptica", barrio: "Centro", direccion: "Av. Argentina 560", lat: -38.9520, lng: -68.0590, horarios: { lun_vie: "09:30-13:00 y 16:30-20:00", sab: "09:30-13:00", dom: "Cerrado" }, aviso: null },
+    { id: 22, nombre: "Lavadero Express", categoria: "Lavandería", barrio: "Godoy", direccion: "Godoy 1600", lat: -38.9480, lng: -68.0870, horarios: { lun_vie: "08:00-13:00 y 16:00-20:00", sab: "08:00-14:00", dom: "Cerrado" }, aviso: "Retiro y entrega a domicilio" }
+  ];
+
+  /* ===================================================================
+     1. UTILIDADES
+     =================================================================== */
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+  const movReducido = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const ICONOS = {
+    pin:    '<path d="M12 22s7-6.2 7-12a7 7 0 10-14 0c0 5.800 7 12 7 12z"/><circle cx="12" cy="10" r="2.500"/>',
+    heart:  '<path d="M12 21.350l-1.450-1.320C5.400 15.360 2 12.280 2 8.500 2 5.420 4.420 3 7.500 3c1.740 0 3.410.81 4.500 2.090C13.090 3.810 14.760 3 16.500 3 19.580 3 22 5.420 22 8.500c0 3.780-3.400 6.860-8.550 11.540L12 21.350z"/>',
+    share:  '<path d="M12 15V3M8 7l4-4 4 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>',
+    route:  '<path d="M3 11l18-8-8 18-2-8-8-2z"/>',
+    chat:   '<path d="M21 11.500a8.500 8.500 0 01-12.600 7.400L3 20.500l1.300-5A8.500 8.500 0 1121 11.500z"/>',
+    map:    '<path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/>',
+    locate: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.500"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
+    clock:  '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    star:   '<path d="M12 3l2.800 5.700 6.200.9-4.500 4.400 1.100 6.200L12 17.200 6.400 20.200l1.100-6.200L3 9.600l6.200-.9L12 3z"/>'
+  };
+  const ico = (nombre, cls = '') => {
+    const s = document.createElement('span');
+    s.className = ('ico ' + cls).trim();
+    s.setAttribute('aria-hidden', 'true');
+    s.innerHTML = `<svg viewBox="0 0 24 24" focusable="false">${ICONOS[nombre] || ''}</svg>`; // constante interna, no datos de usuario
+    return s;
+  };
+
+  /** Crea nodos DOM sin innerHTML: todo texto de usuario pasa por createTextNode (anti-XSS). */
+  function h(tag, props, ...hijos) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(props || {})) {
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k === 'dataset') Object.assign(el.dataset, v);
+      else if (k === 'on') for (const [ev, fn] of Object.entries(v)) el.addEventListener(ev, fn);
+      else el.setAttribute(k, v === true ? '' : String(v));
+    }
+    const agregar = (n) => {
+      if (n == null || n === false) return;
+      if (Array.isArray(n)) n.forEach(agregar);
+      else el.append(n instanceof Node ? n : document.createTextNode(String(n)));
+    };
+    hijos.forEach(agregar);
+    return el;
+  }
+  const setTxt = (el, v) => { if (el && el.textContent !== v) el.textContent = v; };
+  /** replaceChildren que ignora null/false (replaceChildren(null) insertaría el texto "null"). */
+  const reemplazar = (el, ...nodos) => el.replaceChildren(...nodos.flat().filter(n => n != null && n !== false));
+  const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+  const norm = (s) => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const fmtMin = (m) => `${pad2(Math.floor(m / 60) % 24)}:${pad2(m % 60)}`;
+  const txt = (v, max) => (typeof v === 'string' || typeof v === 'number') ? String(v).replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max) : '';
+  const num = (v) => {
+    if (typeof v === 'number') return Number.isFinite(v) ? v : NaN;
+    if (typeof v === 'string' && v.trim() !== '') { const n = Number(v.trim().replace(',', '.')); return Number.isFinite(n) ? n : NaN; }
+    return NaN;
+  };
+  const esCoord = (lat, lng) => lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+
+  function distanciaM(a, b) {                      // haversine
+    const R = 6371000, rad = Math.PI / 180;
+    const dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
+    const x = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(x));
+  }
+  function fmtDist(m) {
+    if (m < 950) return `${Math.max(50, Math.round(m / 50) * 50)} m`;
+    return `${(m / 1000).toLocaleString('es-AR', { maximumFractionDigits: 1, minimumFractionDigits: m < 10000 ? 1 : 0 })} km`;
+  }
+  /** Normaliza un teléfono argentino al formato de wa.me (549 + área + número). Devuelve '' si no es válido. */
+  function telefonoWa(v) {
+    let d = String(v ?? '').replace(/\D/g, '');
+    if (!d) return '';
+    if (d.startsWith('00')) d = d.slice(2);
+    if (d.startsWith('54')) { if (d[2] !== '9' && d.length === 12) d = '549' + d.slice(2); }
+    else { d = d.replace(/^0/, ''); d = '549' + d; }
+    return d.length >= 12 && d.length <= 15 ? d : '';
+  }
+
+  /* ---------- SHA-256 (con respaldo en JS puro si crypto.subtle no existe, p. ej. http en LAN) ---------- */
+  function sha256js(str) {
+    const bytes = new TextEncoder().encode(str);
+    const primos = []; for (let n = 2; primos.length < 64; n++) if (primos.every(p => n % p)) primos.push(n);
+    const frac = (x) => Math.floor((x - Math.floor(x)) * 4294967296) >>> 0;
+    const K = primos.map(p => frac(Math.cbrt(p)));
+    const H = primos.slice(0, 8).map(p => frac(Math.sqrt(p)));
+    const largo = bytes.length, total = (((largo + 9) >> 6) + 1) << 6;
+    const buf = new Uint8Array(total); buf.set(bytes); buf[largo] = 0x80;
+    const dv = new DataView(buf.buffer);
+    dv.setUint32(total - 8, Math.floor((largo * 8) / 4294967296)); dv.setUint32(total - 4, (largo * 8) >>> 0);
+    const rotr = (x, n) => (x >>> n) | (x << (32 - n));
+    const w = new Uint32Array(64);
+    for (let o = 0; o < total; o += 64) {
+      for (let i = 0; i < 16; i++) w[i] = dv.getUint32(o + i * 4);
+      for (let i = 16; i < 64; i++) {
+        const s0 = rotr(w[i - 15], 7) ^ rotr(w[i - 15], 18) ^ (w[i - 15] >>> 3);
+        const s1 = rotr(w[i - 2], 17) ^ rotr(w[i - 2], 19) ^ (w[i - 2] >>> 10);
+        w[i] = (w[i - 16] + s0 + w[i - 7] + s1) >>> 0;
+      }
+      let [a, b, c, d, e, f, g, hh] = H;
+      for (let i = 0; i < 64; i++) {
+        const t1 = (hh + (rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25)) + ((e & f) ^ (~e & g)) + K[i] + w[i]) >>> 0;
+        const t2 = ((rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) >>> 0;
+        hh = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+      }
+      [a, b, c, d, e, f, g, hh].forEach((v, i) => { H[i] = (H[i] + v) >>> 0; });
+    }
+    return H.map(v => v.toString(16).padStart(8, '0')).join('');
+  }
+  async function sha256(str) {
+    try {
+      if (window.crypto?.subtle) {
+        const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+        return Array.from(new Uint8Array(d), b => b.toString(16).padStart(2, '0')).join('');
+      }
+    } catch { /* cae al respaldo */ }
+    return sha256js(str);
+  }
+  window.__hash = (sal, usuario, clave) => sha256(`${sal}:${usuario}:${clave}`);   // ayuda para cambiar la contraseña
+
+  /* ===================================================================
+     2. ALMACENAMIENTO ROBUSTO (localStorage / sessionStorage)
+        - Tolera modo privado, cuota llena, bloqueo de cookies y JSON corrupto.
+        - Si el almacenamiento no está disponible, trabaja en memoria.
+     =================================================================== */
+  function crearAlmacen(tipo) {
+    let st = null;
+    try { st = window[tipo]; const k = '__t'; st.setItem(k, k); st.removeItem(k); } catch { st = null; }
+    const mem = new Map();
+    return {
+      persistente: !!st,
+      crudo(k) { try { return st ? st.getItem(k) : (mem.get(k) ?? null); } catch { return null; } },
+      leer(k, defecto) {
+        const raw = this.crudo(k);
+        if (raw == null) return defecto;
+        try { return JSON.parse(raw); } catch { return defecto; }
+      },
+      escribir(k, valor) {
+        try { const s = typeof valor === 'string' ? valor : JSON.stringify(valor); if (st) st.setItem(k, s); else mem.set(k, s); return true; }
+        catch { return false; }
+      },
+      borrar(k) { try { st ? st.removeItem(k) : mem.delete(k); } catch { /* nada */ } }
+    };
+  }
+  const Local = crearAlmacen('localStorage');
+  const Sesion = crearAlmacen('sessionStorage');
+
+  /* ===================================================================
+     3. NOTIFICACIONES Y DIÁLOGOS
+     =================================================================== */
+  const Toast = {
+    mostrar(msg, { error = false, ms = 3400 } = {}) {
+      const cont = $('#toasts');
+      const el = h('div', { class: 'toast' + (error ? ' error' : '') }, msg);
+      cont.append(el);
+      while (cont.children.length > 3) cont.firstElementChild.remove();
+      setTimeout(() => { el.classList.add('salir'); setTimeout(() => el.remove(), 320); }, ms);
+    }
+  };
+
+  const Dlg = {
+    abrir(d) {
+      if (d.open) return;
+      if (typeof d.showModal === 'function') d.showModal(); else d.setAttribute('open', '');
+    },
+    cerrar(d) { if (typeof d.close === 'function') d.close(); else d.removeAttribute('open'); },
+    iniciar() {
+      $$('dialog').forEach(d => {
+        // cerrar al tocar el fondo (solo si el gesto empezó y terminó en el fondo)
+        let abajo = null;
+        d.addEventListener('pointerdown', e => { abajo = e.target; });
+        d.addEventListener('click', e => { if (e.target === d && abajo === d) Dlg.cerrar(d); });
+        $$('[data-cerrar]', d).forEach(b => b.addEventListener('click', () => Dlg.cerrar(d)));
+      });
+    },
+    confirmar({ titulo, mensaje, ok = 'Aceptar', peligro = false, cancelar = true }) {
+      const d = $('#dlg-confirm');
+      setTxt($('#conf-t'), titulo); setTxt($('#conf-m'), mensaje);
+      const bOk = $('#conf-ok'); setTxt(bOk, ok);
+      bOk.className = 'btn ' + (peligro ? 'btn-peligro-fill' : 'btn-primario');
+      $('#conf-cancel').hidden = !cancelar;
+      d.returnValue = '';
+      return new Promise(res => {
+        d.addEventListener('close', () => res(d.returnValue === 'ok'), { once: true });
+        Dlg.abrir(d);
+      });
+    }
+  };
+
+  /* ===================================================================
+     4. HORARIOS  (zona horaria de Neuquén, tramos nocturnos, 24 hs)
+     =================================================================== */
+  const DIAS = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  let fmtAhora = null;
+  try {
+    fmtAhora = new Intl.DateTimeFormat('en-US', { timeZone: CONFIG.zonaHoraria, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  } catch { fmtAhora = null; }
+
+  /** → { dia: 0-6, min: minutos desde 00:00 } en hora de Neuquén (o la del dispositivo si Intl falla). */
+  function ahora() {
+    const d = new Date();
+    if (fmtAhora) {
+      try {
+        const p = Object.fromEntries(fmtAhora.formatToParts(d).map(x => [x.type, x.value]));
+        const dia = DIAS[p.weekday];
+        if (dia != null) return { dia, min: (Number(p.hour) % 24) * 60 + Number(p.minute) };
+      } catch { /* respaldo abajo */ }
+    }
+    return { dia: d.getDay(), min: d.getHours() * 60 + d.getMinutes() };
+  }
+  const claveDia = (dia) => dia === 0 ? 'dom' : dia === 6 ? 'sab' : 'lun_vie';
+
+  /** Texto → [{ini, fin}] en minutos. [] = cerrado. null = formato inválido. `fin > 1440` indica que cruza la medianoche. */
+  function parsearBloques(texto) {
+    const t = norm(texto);
+    if (!t || /^(cerrado|no abre|no atiende|-)$/.test(t)) return [];
+    if (/^24\s*(hs?|horas)\.?$/.test(t)) return [{ ini: 0, fin: 1440 }];
+    const re = /^(\d{1,2})(?::(\d{2}))?\s*(?:hs?\.?)?\s*(?:-|–|a)\s*(\d{1,2})(?::(\d{2}))?\s*(?:hs?\.?)?$/;
+    const bloques = [];
+    for (const parte of t.split(/\s+y\s+|\s*[,;/]\s*/)) {
+      const m = re.exec(parte.trim());
+      if (!m) return null;
+      const h1 = +m[1], m1 = +(m[2] ?? 0), h2 = +m[3], m2 = +(m[4] ?? 0);
+      if (h1 > 24 || h2 > 24 || m1 > 59 || m2 > 59) return null;
+      const ini = (h1 % 24) * 60 + m1;
+      let fin = h2 * 60 + m2;
+      if (fin <= ini) fin += 1440;
+      bloques.push({ ini, fin });
+    }
+    return bloques;
+  }
+  const es24h = (b) => b.fin - b.ini >= 1439;
+
+  /** → { clave: 'abierto'|'pronto'|'cerrado', detalle: 'Cierra 13:00' | 'Abre 17:00' | '24 horas' | '' } */
+  function estadoDe(c, t) {
+    const hoy = c._b[claveDia(t.dia)], ayer = c._b[claveDia((t.dia + 6) % 7)];
+    for (const b of ayer) {                                  // tramo de ayer que termina hoy de madrugada
+      if (b.fin > 1440 && t.min < b.fin - 1440) {
+        const resta = b.fin - 1440 - t.min;
+        return { clave: resta <= CONFIG.umbralCierraPronto ? 'pronto' : 'abierto', detalle: 'Cierra ' + fmtMin(b.fin) };
+      }
+    }
+    for (const b of hoy) {
+      if (t.min >= b.ini && t.min < b.fin) {
+        if (es24h(b)) return { clave: 'abierto', detalle: '24 horas' };
+        return { clave: b.fin - t.min <= CONFIG.umbralCierraPronto ? 'pronto' : 'abierto', detalle: 'Cierra ' + fmtMin(b.fin) };
+      }
+    }
+    const prox = hoy.filter(b => b.ini > t.min).sort((a, b) => a.ini - b.ini)[0];
+    return { clave: 'cerrado', detalle: prox ? 'Abre ' + fmtMin(prox.ini) : '' };
+  }
+  const textoEstado = (k) => k === 'abierto' ? 'Abierto ahora' : k === 'pronto' ? 'Cierra pronto' : 'Cerrado';
+  const horarioHoy = (c, t) => c.horarios[claveDia(t.dia)] || 'Cerrado';
+
+  function coincideFranja(c, franja, t) {
+    if (!franja) return true;
+    if (franja === 'abierto') return estadoDe(c, t).clave !== 'cerrado';
+    const hoy = c._b[claveDia(t.dia)];
+    if (!hoy.length) return false;
+    if (franja === '24hs') return hoy.some(es24h);
+    const rangos = { manana: [0, 780], tarde: [780, 1080], noche: [1080, 1440] }[franja];
+    return !rangos || hoy.some(b => b.ini < rangos[1] && Math.min(b.fin, 1440) > rangos[0]);
+  }
+
+  /* ===================================================================
+     5. DATOS: validación, carga, persistencia
+     =================================================================== */
+  const inferirTipo = (cat) => cat === 'Feria' ? 'feria' : TIPOS_SERVICIO.includes(cat) ? 'servicio' : 'local';
+
+  /** Valida y limpia un registro (de localStorage, JSON importado o formulario). Devuelve null si no es utilizable. */
+  function normalizar(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const nombre = txt(raw.nombre, 80), direccion = txt(raw.direccion, 120);
+    const lat = num(raw.lat), lng = num(raw.lng);
+    if (!nombre || !esCoord(lat, lng)) return null;
+    const hz = raw.horarios && typeof raw.horarios === 'object' ? raw.horarios : {};
+    const categoria = CAT_LABEL.has(raw.categoria) ? raw.categoria : 'Otros';
+    const id = Number.isInteger(+raw.id) && +raw.id > 0 ? +raw.id : null;
+    const c = {
+      id, nombre, categoria, direccion: direccion || 'Sin dirección',
+      barrio: txt(raw.barrio, 60) || 'Centro',
+      tipo: TIPOS[raw.tipo] ? raw.tipo : inferirTipo(categoria),
+      lat, lng,
+      horarios: { lun_vie: txt(hz.lun_vie, 80) || 'Cerrado', sab: txt(hz.sab, 80) || 'Cerrado', dom: txt(hz.dom, 80) || 'Cerrado' },
+      aviso: txt(raw.aviso, 160) || null,
+      telefono: telefonoWa(raw.telefono),
+      rev: 0
+    };
+    return derivar(c);
+  }
+  /** Campos calculados (no se persisten): índice de búsqueda y horarios parseados. */
+  function derivar(c) {
+    c._q = norm([c.nombre, c.categoria, CAT_LABEL.get(c.categoria), c.barrio, c.direccion, c.aviso, TIPOS[c.tipo]].join(' '));
+    c._b = {
+      lun_vie: parsearBloques(c.horarios.lun_vie) || [],
+      sab: parsearBloques(c.horarios.sab) || [],
+      dom: parsearBloques(c.horarios.dom) || []
+    };
+    c._d = null;
+    return c;
+  }
+  const serializar = (c) => ({ id: c.id, nombre: c.nombre, categoria: c.categoria, tipo: c.tipo, barrio: c.barrio, direccion: c.direccion, lat: c.lat, lng: c.lng, horarios: c.horarios, aviso: c.aviso, telefono: c.telefono || '' });
+
+  /** Lista cruda → { items, descartados }. Reasigna ids ausentes o repetidos. */
+  function normalizarLista(lista) {
+    const items = []; let descartados = 0;
+    for (const r of lista) { const c = normalizar(r); if (c) items.push(c); else descartados++; }
+    const usados = new Set(); let max = Math.max(0, ...items.filter(c => c.id).map(c => c.id));
+    for (const c of items) { if (!c.id || usados.has(c.id)) c.id = ++max; usados.add(c.id); }
+    return { items, descartados };
+  }
+
+  const Datos = {
+    items: [], porId: new Map(), siguienteId: 1, origen: 'ejemplo', persistenteOk: true,
+    _poner(items) {
+      this.items = items; this.porId = new Map(items.map(c => [c.id, c]));
+      this.siguienteId = Math.max(0, ...items.map(c => c.id)) + 1;
+    },
+    async _desdeFuente() {
+      const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 2500);
+      try {
+        const r = await fetch(CONFIG.fuenteDatos, { signal: ctl.signal, cache: 'no-cache' });
+        if (!r.ok) return null;
+        const j = await r.json();
+        const lista = Array.isArray(j) ? j : j?.items;
+        if (!Array.isArray(lista)) return null;
+        const res = normalizarLista(lista);
+        return res.items.length ? res.items : null;
+      } catch { return null; } finally { clearTimeout(to); }
+    },
+    async cargar() {
+      const raw = Local.crudo(CONFIG.claves.datos);
+      if (raw != null) {
+        let lista = null;
+        try { const p = JSON.parse(raw); lista = Array.isArray(p) ? p : p?.items; } catch { lista = null; }
+        if (Array.isArray(lista)) {
+          const { items, descartados } = normalizarLista(lista);
+          if (items.length || lista.length === 0) {
+            this._poner(items); this.origen = 'local';
+            if (descartados) Toast.mostrar(`Se ignoraron ${descartados} registros dañados.`, { error: true });
+            return;
+          }
+        }
+        // Datos corruptos: se guarda una copia para poder recuperarlos a mano y se parte de cero.
+        Local.escribir(CONFIG.claves.datos + '_corrupto', raw);
+        Local.borrar(CONFIG.claves.datos);
+        Toast.mostrar('Los datos guardados estaban dañados. Se restauraron los de ejemplo.', { error: true, ms: 5000 });
+      }
+      const remotos = await this._desdeFuente();
+      if (remotos) { this._poner(remotos); this.origen = 'archivo'; return; }
+      this._poner(normalizarLista(DATOS_INICIALES).items); this.origen = 'ejemplo';
+    },
+    guardar() {
+      const ok = Local.escribir(CONFIG.claves.datos, { v: 2, items: this.items.map(serializar) });
+      this.persistenteOk = ok && Local.persistente;
+      if (!ok) Toast.mostrar('No se pudo guardar en este navegador (almacenamiento lleno o bloqueado). Exportá un respaldo.', { error: true, ms: 6000 });
+      else if (!Local.persistente) Toast.mostrar('Navegación privada: los cambios se perderán al cerrar. Exportá un respaldo.', { ms: 5000 });
+      return ok;
+    },
+    upsert(datos, id) {
+      if (id) {
+        const prev = this.porId.get(id); if (!prev) return null;
+        const c = normalizar({ ...datos, id }); if (!c) return null;
+        c.rev = prev.rev + 1; c._d = prev._d;
+        this.items[this.items.indexOf(prev)] = c; this.porId.set(id, c); return c;
+      }
+      const c = normalizar({ ...datos, id: this.siguienteId }); if (!c) return null;
+      this.items.push(c); this.porId.set(c.id, c); this.siguienteId++; return c;
+    },
+    eliminar(id) { this._poner(this.items.filter(c => c.id !== id)); },
+    reemplazar(items) { this._poner(items); this.origen = 'local'; },
+    async restablecer() { Local.borrar(CONFIG.claves.datos); await this.cargar(); }
+  };
+
+  const Favs = {
+    ids: new Set(),
+    cargar() { const a = Local.leer(CONFIG.claves.favoritos, []); this.ids = new Set(Array.isArray(a) ? a.filter(Number.isInteger) : []); },
+    tiene(id) { return this.ids.has(id); },
+    alternar(id) { this.ids.has(id) ? this.ids.delete(id) : this.ids.add(id); Local.escribir(CONFIG.claves.favoritos, [...this.ids]); return this.ids.has(id); },
+    cantidad() { let n = 0; for (const id of this.ids) if (Datos.porId.has(id)) n++; return n; }
+  };
+
+  /* ===================================================================
+     6. GEOLOCALIZACIÓN (opcional, bajo demanda, una sola lectura, solo en memoria)
+     =================================================================== */
+  const Geo = {
+    pos: null,
+    obtener() {
+      return new Promise((res, rej) => {
+        if (!('geolocation' in navigator)) return rej({ code: 0 });
+        navigator.geolocation.getCurrentPosition(
+          p => { this.pos = { lat: p.coords.latitude, lng: p.coords.longitude, prec: p.coords.accuracy }; res(this.pos); },
+          e => rej(e), { enableHighAccuracy: false, timeout: 12000, maximumAge: 300000 });
+      });
+    },
+    calcular(items) { if (!this.pos) return; for (const c of items) c._d = distanciaM(this.pos, c); },
+    limpiar(items) { this.pos = null; for (const c of items) c._d = null; },
+    mensajeError(e) {
+      if (e?.code === 1) return 'Permiso de ubicación denegado. Podés activarlo en los ajustes del navegador.';
+      if (e?.code === 3) return 'Se agotó el tiempo esperando tu ubicación. Probá de nuevo.';
+      if (e?.code === 0) return 'Tu navegador no permite obtener la ubicación.';
+      return 'No pudimos obtener tu ubicación.';
+    }
+  };
+
+  /* ===================================================================
+     7. ENLACES EXTERNOS Y COMPARTIR
+     =================================================================== */
+  const urlRuta = (c) => `https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`;
+  const urlOSM = (c) => `https://www.openstreetmap.org/?mlat=${c.lat}&mlon=${c.lng}#map=18/${c.lat}/${c.lng}`;
+  const urlWaContacto = (c) => `https://wa.me/${c.telefono}?text=${encodeURIComponent(`Hola, vi ${c.nombre} en ${CONFIG.nombreApp}.`)}`;
+
+  function textoCompartir(c) {
+    const t = ahora(), e = estadoDe(c, t);
+    const l = [`*${c.nombre}* · ${CAT_LABEL.get(c.categoria)}`, `📍 ${c.direccion}, ${c.barrio}`,
+               `🕒 Hoy: ${horarioHoy(c, t)} (${textoEstado(e.clave)})`];
+    if (c.aviso) l.push(`📢 ${c.aviso}`);
+    l.push(`🗺️ ${urlOSM(c)}`);
+    const base = /^https?:$/.test(location.protocol) ? ` · ${location.origin}${location.pathname}` : '';
+    l.push(`Visto en ${CONFIG.nombreApp}${base}`);
+    return l.join('\n');
+  }
+  async function copiar(texto) {
+    try { await navigator.clipboard.writeText(texto); return true; }
+    catch {
+      const ta = h('textarea', { 'aria-hidden': 'true', style: 'position:fixed;opacity:0;top:0' }, texto);
+      document.body.append(ta); ta.select();
+      let ok = false; try { ok = document.execCommand('copy'); } catch { /* nada */ }
+      ta.remove(); return ok;
+    }
+  }
+  async function compartirWhatsApp(c) {
+    const texto = textoCompartir(c);
+    const w = window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank', 'noopener');
+    if (!w) {                                             // bloqueador de ventanas emergentes
+      if (navigator.share) { try { await navigator.share({ text: texto }); return; } catch { /* cancelado */ } }
+      Toast.mostrar(await copiar(texto) ? 'Copiamos los datos para que los pegues donde quieras.' : 'No pudimos abrir WhatsApp.', { error: false });
+    }
+  }
+
+  /* ===================================================================
+     8. ESTADO DE LA INTERFAZ
+     =================================================================== */
+  const Estado = { q: '', rubro: '', horario: '', tipo: '', oferta: '', barrio: '', soloFavs: false, cerca: false, sel: null };
+  const hayFiltros = () => !!(Estado.q || Estado.rubro || Estado.horario || Estado.tipo || Estado.oferta || Estado.barrio || Estado.soloFavs);
+
+  function filtrar(t) {
+    const palabras = norm(Estado.q).split(' ').filter(Boolean);
+    const r = Datos.items.filter(c =>
+      (!Estado.rubro || c.categoria === Estado.rubro) &&
+      (!Estado.barrio || c.barrio === Estado.barrio) &&
+      (!Estado.tipo || c.tipo === Estado.tipo) &&
+      (!Estado.oferta || c.aviso) &&
+      (!Estado.soloFavs || Favs.tiene(c.id)) &&
+      palabras.every(w => c._q.includes(w)) &&
+      coincideFranja(c, Estado.horario, t));
+    if (Estado.cerca && Geo.pos) r.sort((a, b) => a._d - b._d);
+    return r;
+  }
+
+  /* ===================================================================
+     9. VISTAS: tarjetas, popup, listado
+     =================================================================== */
+  function botonFav(c) {
+    const b = h('button', { type: 'button', class: 'fav', dataset: { act: 'fav', id: c.id } }, ico('heart'));
+    pintarFav(b, Favs.tiene(c.id), c.nombre);
+    return b;
+  }
+  function pintarFav(b, activo, nombre) {
+    b.setAttribute('aria-pressed', String(activo));
+    b.setAttribute('aria-label', (activo ? 'Quitar de favoritos: ' : 'Guardar en favoritos: ') + (nombre ?? ''));
+    b.title = activo ? 'Quitar de favoritos' : 'Guardar en favoritos';
+  }
+  function crearAcciones(c, { verEnMapa = false, fav = false } = {}) {
+    const a = h('div', { class: 'card-acciones' });
+    if (verEnMapa && Mapa.listo) a.append(h('button', { type: 'button', class: 'btn btn-tint', dataset: { act: 'ver', id: c.id } }, ico('map'), 'Ver en mapa'));
+    a.append(h('a', { class: 'btn btn-gris', href: urlRuta(c), target: '_blank', rel: 'noopener noreferrer', 'aria-label': `Cómo llegar a ${c.nombre}` }, ico('route'), 'Cómo llegar'));
+    a.append(h('button', { type: 'button', class: 'btn btn-gris', dataset: { act: 'compartir', id: c.id }, 'aria-label': `Compartir ${c.nombre} por WhatsApp` }, ico('share'), 'Compartir'));
+    if (c.telefono) a.append(h('a', { class: 'btn btn-primario', href: urlWaContacto(c), target: '_blank', rel: 'noopener noreferrer', 'aria-label': `Escribir por WhatsApp a ${c.nombre}` }, ico('chat'), 'WhatsApp'));
+    if (fav) a.append(botonFav(c));
+    return a;
+  }
+
+  const Lista = {
+    el: null, cache: new Map(),
+    iniciar() { this.el = $('#lista-comercios'); },
+    cargando() { this.el.setAttribute('aria-busy', 'true'); this.el.replaceChildren(...[0, 1, 2].map(() => h('li', { class: 'skeleton', 'aria-hidden': 'true' }))); },
+
+    crear(c) {
+      const refs = {
+        badge: h('span', { class: 'badge' }), detalle: h('span', { class: 'detalle' }),
+        distTxt: h('span'), dist: null, hoy: h('span'), fav: botonFav(c)
+      };
+      refs.dist = h('span', { class: 'dist', hidden: true, title: 'Distancia aproximada en línea recta' }, ico('locate'), refs.distTxt);
+      const idT = 'c-t-' + c.id;
+      const li = h('li', { class: 'card', dataset: { id: c.id }, 'aria-labelledby': idT },
+        h('div', { class: 'card-top' },
+          h('div', { class: 'card-info' },
+            h('h3', { class: 'card-nombre', id: idT }, h('button', { type: 'button', class: 'card-titulo', dataset: { act: 'ver', id: c.id }, 'aria-label': `${c.nombre}: ${Mapa.listo ? 'ver en el mapa' : 'seleccionar'}` }, c.nombre)),
+            h('div', { class: 'card-meta' }, h('b', null, CAT_LABEL.get(c.categoria)), ' · ', TIPOS[c.tipo])),
+          refs.fav),
+        h('div', { class: 'card-estado' }, refs.badge, refs.detalle, refs.dist),
+        h('p', { class: 'card-dir' }, ico('pin'), h('span', null, `${c.direccion} · ${c.barrio}`)),
+        h('p', { class: 'card-hoy' }, ico('clock'), refs.hoy),
+        c.aviso ? h('div', { class: 'card-aviso' }, '📢 ', c.aviso) : null,
+        crearAcciones(c, { verEnMapa: true }));
+      const rec = { el: li, refs, rev: c.rev, mapa: Mapa.listo };
+      this.cache.set(c.id, rec);
+      return rec;
+    },
+    actualizar(rec, c, t) {
+      const e = estadoDe(c, t), r = rec.refs;
+      const cls = 'badge ' + e.clave; if (r.badge.className !== cls) r.badge.className = cls;
+      setTxt(r.badge, textoEstado(e.clave)); setTxt(r.detalle, e.detalle); setTxt(r.hoy, 'Hoy: ' + horarioHoy(c, t));
+      const verDist = Estado.cerca && c._d != null; r.dist.hidden = !verDist;
+      if (verDist) setTxt(r.distTxt, fmtDist(c._d));
+      const sel = Estado.sel === c.id;
+      rec.el.classList.toggle('sel', sel);
+      if (sel) rec.el.setAttribute('aria-current', 'true'); else rec.el.removeAttribute('aria-current');
+    },
+    render(filtrados, t) {
+      const els = [];
+      for (const c of filtrados) {
+        let rec = this.cache.get(c.id);
+        if (!rec || rec.rev !== c.rev || rec.mapa !== Mapa.listo) rec = this.crear(c);   // solo se recrea si cambió el dato
+        this.actualizar(rec, c, t);
+        els.push(rec.el);
+      }
+      for (const id of [...this.cache.keys()]) if (!Datos.porId.has(id)) this.cache.delete(id);
+      if (!els.length) els.push(this.vacio());
+      const actuales = this.el.children;
+      const igual = actuales.length === els.length && els.every((e, i) => actuales[i] === e);
+      if (!igual) this.el.replaceChildren(...els);
+      this.el.setAttribute('aria-busy', 'false');
+    },
+    vacio() {
+      const sinDatos = !Datos.items.length;
+      const msg = sinDatos ? 'Todavía no hay comercios cargados.'
+        : Estado.soloFavs && !Favs.cantidad() ? 'Todavía no guardaste favoritos. Tocá el corazón de un comercio.'
+        : 'No encontramos comercios con esos filtros.';
+      return h('li', { class: 'vacio' }, h('strong', null, sinDatos ? 'Sin comercios' : 'Sin resultados'), h('span', null, msg),
+        hayFiltros() ? h('button', { type: 'button', class: 'btn btn-tint', on: { click: limpiarFiltros } }, 'Limpiar filtros') : null);
+    },
+    marcar(id) { this.cache.forEach((rec, k) => { const s = k === id; rec.el.classList.toggle('sel', s); if (s) rec.el.setAttribute('aria-current', 'true'); else rec.el.removeAttribute('aria-current'); }); },
+    mostrar(id) { const rec = this.cache.get(id); if (rec) rec.el.scrollIntoView({ block: 'nearest', behavior: movReducido() ? 'auto' : 'smooth' }); }
+  };
+
+  /* ===================================================================
+     10. MAPA (Leaflet): carga defensiva, marcadores con diff, fallbacks
+     =================================================================== */
+  function cargarScript(src, ms = 9000) {
+    return new Promise((res, rej) => {
+      const s = document.createElement('script'); s.src = src; s.async = true;
+      const to = setTimeout(() => { s.remove(); rej(new Error('timeout')); }, ms);
+      s.onload = () => { clearTimeout(to); res(); };
+      s.onerror = () => { clearTimeout(to); s.remove(); rej(new Error('error')); };
+      document.head.append(s);
+    });
+  }
+  async function cargarLeaflet() {
+    if (window.L?.map) return true;
+    for (const src of [CONFIG.leaflet.local, CONFIG.leaflet.cdn]) {
+      try { await cargarScript(src); if (window.L?.map) return true; } catch { /* prueba el siguiente origen */ }
+    }
+    return false;
+  }
+
+  const Mapa = {
+    listo: false, map: null, capa: null, cache: new Map(), yo: null, pend: null, tilesError: 0, ro: null,
+    visible() { const e = $('#map'); return !!e && e.clientWidth > 0 && e.clientHeight > 0; },
+
+    estado(modo, mensaje, accion) {
+      const e = $('#mapa-estado');
+      if (!modo) { e.hidden = true; return; }
+      e.hidden = false; e.dataset.modo = modo;
+      reemplazar(e, h('p', null, mensaje), accion);
+    },
+
+    async arrancar() {
+      this.estado('carga', 'Cargando mapa…');
+      const ok = await cargarLeaflet();
+      if (!ok) return this.fallar();
+      try { this.iniciar(); } catch (err) { console.error('Leaflet falló al iniciar:', err); this.fallar(); }
+    },
+    fallar() {
+      this.listo = false;
+      $('#app').classList.add('sin-mapa'); setVista('lista');
+      Lista.cache.clear(); refrescar();
+      if (!$('#aviso-mapa')) {
+        const aviso = h('div', { class: 'nota', id: 'aviso-mapa', role: 'status', style: 'margin-bottom:.5rem' },
+          'El mapa no está disponible (sin conexión o recurso bloqueado). El listado y el panel admin siguen funcionando. ',
+          h('button', { type: 'button', class: 'btn btn-tint', style: 'min-height:32px;margin-left:.25rem', on: { click: () => reintentarMapa() } }, 'Reintentar'));
+        $('.lista-wrap').insertBefore(aviso, $('.lista-scroll'));
+      }
+    },
+    iniciar() {
+      const L = window.L;
+      $('#aviso-mapa')?.remove();
+      $('#app').classList.remove('sin-mapa');
+      this.map = L.map('map', { center: CONFIG.centro, zoom: CONFIG.zoom, zoomControl: false, zoomSnap: 0.5 });
+      L.control.zoom({ position: 'topright', zoomInTitle: 'Acercar', zoomOutTitle: 'Alejar' }).addTo(this.map);
+      const tiles = L.tileLayer(CONFIG.tiles.url, { maxZoom: 19, attribution: CONFIG.tiles.attribution });
+      tiles.on('tileload', () => { if (this.tilesError) { this.tilesError = 0; this.estado(null); } });
+      tiles.on('tileerror', () => {
+        if (++this.tilesError === 6) this.estado('aviso', 'No se pudieron cargar los mosaicos del mapa. Los comercios siguen en el listado.');
+      });
+      tiles.addTo(this.map);
+      this.capa = L.layerGroup().addTo(this.map);
+      this.map.on('popupopen', (e) => {
+        const el = e.popup.getElement();
+        if (el && !el._ligado) { el._ligado = true; el.addEventListener('click', alAccion); }
+      });
+      this.map.on('click', () => { /* tocar el mapa vacío no deselecciona: evita parpadeos */ });
+      this.ro = new ResizeObserver(debounce(() => this.alRedimensionar(), 80));
+      this.ro.observe($('#map'));
+      this.estado(null);
+      this.listo = true;
+      Lista.cache.clear();                 // recrea tarjetas para mostrar "Ver en mapa"
+      refrescar({ encuadrar: true });
+    },
+    alRedimensionar() {
+      if (!this.map || !this.visible()) return;
+      this.map.invalidateSize({ pan: false });
+      this.aplicarPendientes();
+    },
+    aplicarPendientes() {
+      if (!this.pend || !this.visible()) return;
+      const p = this.pend; this.pend = null;
+      if (p.enfocar) this.enfocar(p.enfocar.id, p.enfocar.popup);
+      else if (p.encuadre) this.encuadrar(p.encuadre);
+    },
+
+    iconoDe(clave, sel) {
+      return window.L.divIcon({ className: 'pin-wrap', html: `<div class="pin ${clave}${sel ? ' sel' : ''}"></div>`, iconSize: [30, 30], iconAnchor: [15, 30], popupAnchor: [0, -32] });
+    },
+    popupDe(id) {
+      const c = Datos.porId.get(id); if (!c) return h('div');
+      const t = ahora(), e = estadoDe(c, t);
+      return h('div', { class: 'popup' },
+        h('strong', null, c.nombre),
+        h('div', { class: 'card-estado' }, h('span', { class: 'badge ' + e.clave }, textoEstado(e.clave)), h('span', { class: 'detalle' }, e.detalle)),
+        h('span', { class: 'card-dir' }, `${c.direccion} · ${c.barrio}`),
+        h('span', { class: 'card-hoy' }, 'Hoy: ' + horarioHoy(c, t)),
+        c.aviso ? h('div', { class: 'card-aviso' }, '📢 ', c.aviso) : null,
+        botonFav(c),
+        crearAcciones(c));
+    },
+    sync(filtrados, t) {
+      if (!this.listo) return;
+      const L = window.L, vistos = new Set();
+      for (const c of filtrados) {
+        vistos.add(c.id);
+        const e = estadoDe(c, t), sel = Estado.sel === c.id;
+        let rec = this.cache.get(c.id);
+        if (!rec) {
+          const marker = L.marker([c.lat, c.lng], { icon: this.iconoDe(e.clave, sel), title: c.nombre, riseOnHover: true });
+          const id = c.id;
+          marker.bindPopup(() => this.popupDe(id), { maxWidth: 300, autoPanPadding: [28, 28] });
+          marker.on('click', () => seleccionar(id, { mover: false, scroll: true }));
+          rec = { marker, clave: e.clave, sel, rev: c.rev };
+          this.cache.set(c.id, rec);
+        } else {
+          if (rec.rev !== c.rev) { rec.marker.setLatLng([c.lat, c.lng]); rec.marker.options.title = c.nombre; rec.rev = c.rev; if (rec.marker.isPopupOpen()) rec.marker.getPopup().setContent(this.popupDe(c.id)); rec.clave = null; }
+          if (rec.clave !== e.clave || rec.sel !== sel) { rec.marker.setIcon(this.iconoDe(e.clave, sel)); rec.clave = e.clave; rec.sel = sel; }
+        }
+        if (!this.capa.hasLayer(rec.marker)) this.capa.addLayer(rec.marker);
+      }
+      for (const [id, rec] of this.cache) {
+        if (vistos.has(id)) continue;
+        if (this.capa.hasLayer(rec.marker)) this.capa.removeLayer(rec.marker);
+        if (!Datos.porId.has(id)) this.cache.delete(id);
+      }
+    },
+    encuadrar(items) {
+      if (!this.listo) return;
+      if (!this.visible()) { this.pend = { encuadre: items }; return; }
+      if (!items.length) return;
+      const pts = items.map(c => [c.lat, c.lng]);
+      if (Geo.pos && Estado.cerca) pts.push([Geo.pos.lat, Geo.pos.lng]);
+      this.map.fitBounds(window.L.latLngBounds(pts), { padding: [48, 48], maxZoom: 16, animate: !movReducido() });
+    },
+    enfocar(id, popup = true) {
+      if (!this.listo) return;
+      if (!this.visible()) { this.pend = { enfocar: { id, popup } }; return; }
+      const rec = this.cache.get(id), c = Datos.porId.get(id);
+      if (!rec || !c) return;
+      this.map.invalidateSize({ pan: false });
+      const ll = [c.lat, c.lng], zoom = Math.max(this.map.getZoom(), 16);
+      const abrir = () => { if (popup && !rec.marker.isPopupOpen()) rec.marker.openPopup(); };
+      const cerca = this.map.getCenter().distanceTo(ll) < 5 && this.map.getZoom() >= 16;
+      if (cerca || movReducido()) { this.map.setView(ll, zoom, { animate: false }); abrir(); return; }
+      this.map.once('moveend', abrir);
+      this.map.flyTo(ll, zoom, { duration: .7 });
+      setTimeout(() => { this.map.off('moveend', abrir); abrir(); }, 1100);   // red de seguridad
+    },
+    mostrarUsuario(pos) {
+      if (!this.listo) return;
+      const L = window.L;
+      this.yo?.forEach(l => l.remove());
+      this.yo = [
+        L.circle([pos.lat, pos.lng], { radius: Math.min(pos.prec || 50, 500), color: '#0a84ff', weight: 1, fillOpacity: .1, interactive: false }).addTo(this.map),
+        L.circleMarker([pos.lat, pos.lng], { radius: 8, color: '#fff', weight: 3, fillColor: '#0a84ff', fillOpacity: 1, interactive: false }).addTo(this.map)
+      ];
+    },
+    quitarUsuario() { this.yo?.forEach(l => l.remove()); this.yo = null; }
+  };
+  async function reintentarMapa() {
+    $('#aviso-mapa')?.remove(); await Mapa.arrancar();
+  }
+
+  /* ===================================================================
+     11. CONTROLADOR: refresco, selección, filtros
+     =================================================================== */
+  function refrescar({ encuadrar = false } = {}) {
+    const t = ahora();
+    if (Geo.pos) Geo.calcular(Datos.items);
+    const filtrados = filtrar(t);
+    Lista.render(filtrados, t);
+    Mapa.sync(filtrados, t);
+    setTxt($('#contador'), filtrados.length === 1 ? '1 comercio' : `${filtrados.length} comercios`);
+    setTxt($('#hora-actual'), 'Ahora ' + fmtMin(t.min));
+    $('#btn-limpiar').hidden = !hayFiltros();
+    actualizarChips();
+    $$('.filtros select').forEach(s => s.classList.toggle('activo', s.value !== ''));
+    if (encuadrar) Mapa.encuadrar(filtrados);
+    return filtrados;
+  }
+  function actualizarChips() {
+    const cerca = $('#chip-cerca'), fav = $('#chip-favs');
+    reemplazar(cerca, ico('locate'), 'Cerca de mí');
+    cerca.setAttribute('aria-pressed', String(Estado.cerca));
+    reemplazar(fav, ico('heart'), 'Favoritos', Favs.cantidad() ? h('span', { class: 'n' }, String(Favs.cantidad())) : null);
+    fav.setAttribute('aria-pressed', String(Estado.soloFavs));
+  }
+  function seleccionar(id, { mover = true, popup = true, scroll = false, cambiarVista = false } = {}) {
+    if (!Datos.porId.has(id)) return;
+    const anterior = Estado.sel; Estado.sel = id;
+    Lista.marcar(id);
+    const t = ahora();
+    [anterior, id].forEach(k => { const rec = Mapa.cache.get(k); const c = Datos.porId.get(k); if (rec && c) { const e = estadoDe(c, t); rec.marker.setIcon(Mapa.iconoDe(e.clave, k === id)); rec.clave = e.clave; rec.sel = k === id; } });
+    if (scroll) Lista.mostrar(id);
+    if (cambiarVista && Mapa.listo) setVista('mapa');
+    if (mover && Mapa.listo) Mapa.enfocar(id, popup);
+  }
+  function setVista(v) {
+    $('#app').dataset.vista = v;
+    $$('#vista-switch button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.vista === v)));
+    if (v === 'mapa' && Mapa.listo) Mapa.alRedimensionar();     // síncrono: el mapa debe conocer su tamaño antes de moverse
+  }
+  function limpiarFiltros() {
+    Object.assign(Estado, { q: '', rubro: '', horario: '', tipo: '', oferta: '', barrio: '', soloFavs: false });
+    $('#busqueda').value = '';
+    ['rubro', 'horario', 'barrio', 'tipo', 'oferta'].forEach(k => { $('#f-' + k).value = ''; });
+    refrescar({ encuadrar: true });
+  }
+
+  /** Acciones delegadas (tarjetas y popups): fav · compartir · ver */
+  function alAccion(ev) {
+    const b = ev.target.closest('[data-act]');
+    if (b) {
+      const id = Number(b.dataset.id), c = Datos.porId.get(id);
+      if (!c) return;
+      ev.stopPropagation();
+      switch (b.dataset.act) {
+        case 'fav': {
+          const activo = Favs.alternar(id);
+          $$(`[data-act="fav"][data-id="${id}"]`).forEach(x => { pintarFav(x, activo, c.nombre); x.classList.remove('pop'); void x.offsetWidth; if (activo) x.classList.add('pop'); });
+          actualizarChips();
+          if (Estado.soloFavs) refrescar();
+          break;
+        }
+        case 'compartir': compartirWhatsApp(c); break;
+        case 'ver': seleccionar(id, { popup: true, scroll: false, cambiarVista: true }); break;
+      }
+      return;
+    }
+    const card = ev.target.closest('.card');
+    if (card && !ev.target.closest('a, button')) seleccionar(Number(card.dataset.id), { popup: true });
+  }
+
+  function poblarSelect(sel, opciones, primero) {
+    const v = sel.value;
+    reemplazar(sel, primero ? h('option', { value: '' }, primero) : null, opciones.map(([val, txt]) => h('option', { value: val }, txt)));
+    if ([...sel.options].some(o => o.value === v)) sel.value = v;
+  }
+  function barriosActuales() {
+    const extra = [...new Set(Datos.items.map(c => c.barrio))].filter(b => !BARRIOS.includes(b)).sort((a, b) => a.localeCompare(b, 'es'));
+    return [...BARRIOS, ...extra];
+  }
+  function poblarSelects() {
+    poblarSelect($('#f-rubro'), CATEGORIAS, 'Todos los rubros');
+    poblarSelect($('#f-horario'), FRANJAS.slice(1), FRANJAS[0][1]);
+    poblarSelect($('#f-barrio'), barriosActuales().map(b => [b, b]), 'Toda la ciudad');
+    poblarSelect($('#f-tipo'), Object.entries(TIPOS), 'Todos los tipos');
+    poblarSelect($('#f-oferta'), [['si', 'Solo con oferta']], 'Con o sin oferta');
+    poblarSelect($('#c-categoria'), CATEGORIAS);
+    poblarSelect($('#c-tipo'), Object.entries(TIPOS));
+    poblarSelect($('#c-barrio'), barriosActuales().map(b => [b, b]));
+  }
+
+  async function alternarCerca() {
+    const chip = $('#chip-cerca');
+    if (Estado.cerca) {                                   // desactivar: se olvida la ubicación
+      Estado.cerca = false; Geo.limpiar(Datos.items); Mapa.quitarUsuario(); refrescar(); return;
+    }
+    chip.setAttribute('aria-busy', 'true');
+    try {
+      const pos = await Geo.obtener();
+      Estado.cerca = true; Geo.calcular(Datos.items);
+      Mapa.mostrarUsuario(pos);
+      const lista = refrescar();
+      const masCerca = lista[0];
+      if (masCerca && masCerca._d > 30000) Toast.mostrar('Estás lejos de Neuquén; igual ordenamos por distancia.');
+      else if (masCerca) Mapa.encuadrar(lista.slice(0, 4));
+      $('#lista-scroll').scrollTo({ top: 0, behavior: movReducido() ? 'auto' : 'smooth' });
+    } catch (e) { Toast.mostrar(Geo.mensajeError(e), { error: true, ms: 5000 }); }
+    finally { chip.removeAttribute('aria-busy'); }
+  }
+
+  /* ===================================================================
+     12. ADMIN: sesión, login, CRUD, importar / exportar
+     =================================================================== */
+  const Admin = {
+    logueado: false, intentos: 0, bloqueadoHasta: 0,
+    iniciar() { this.logueado = Sesion.crudo(CONFIG.claves.sesion) === '1'; this.pintarBoton(); },
+    pintarBoton() {
+      const b = $('#btn-admin');
+      setTxt(b, this.logueado ? 'Panel ✓' : 'Admin');
+      b.dataset.logueado = String(this.logueado);
+    },
+    abrir() { if (this.logueado) { this.renderLista(); Dlg.abrir($('#dlg-admin')); } else { $('#login-error').hidden = true; Dlg.abrir($('#dlg-login')); } },
+    async login(usuario, clave) {
+      const falta = this.bloqueadoHasta - Date.now();
+      if (falta > 0) return `Demasiados intentos. Esperá ${Math.ceil(falta / 1000)} s.`;
+      const hash = await sha256(`${CONFIG.admin.sal}:${usuario}:${clave}`);
+      if (usuario === CONFIG.admin.usuario && hash === CONFIG.admin.hash) {
+        this.intentos = 0; this.logueado = true; Sesion.escribir(CONFIG.claves.sesion, '1'); this.pintarBoton(); return null;
+      }
+      if (++this.intentos >= 5) { this.bloqueadoHasta = Date.now() + 30000; this.intentos = 0; }
+      return 'Usuario o contraseña incorrectos.';
+    },
+    logout() { this.logueado = false; Sesion.borrar(CONFIG.claves.sesion); this.pintarBoton(); },
+
+    renderLista() {
+      const ul = $('#admin-lista');
+      reemplazar(ul, Datos.items.map(c => h('li', { class: 'admin-item' },
+        h('span', { class: 'n' }, c.nombre, ' ', h('small', null, `(${c.barrio})`)),
+        h('button', { type: 'button', class: 'btn btn-gris', on: { click: () => this.abrirForm(c.id) }, 'aria-label': `Editar ${c.nombre}` }, 'Editar'),
+        h('button', { type: 'button', class: 'btn btn-peligro', on: { click: () => this.borrar(c) }, 'aria-label': `Eliminar ${c.nombre}` }, 'Eliminar'))));
+      if (!Datos.items.length) ul.append(h('li', { class: 'vacio' }, 'No hay comercios. Creá uno nuevo o importá un JSON.'));
+    },
+    async borrar(c) {
+      if (!await Dlg.confirmar({ titulo: '¿Eliminar comercio?', mensaje: `Se eliminará “${c.nombre}”. Podés exportar un respaldo antes.`, ok: 'Eliminar', peligro: true })) return;
+      Datos.eliminar(c.id); Datos.guardar(); this.despuesDeCambio(); Toast.mostrar('Comercio eliminado.');
+    },
+    despuesDeCambio() { poblarSelects(); this.renderLista(); refrescar(); },
+
+    abrirForm(id = null) {
+      const f = $('#form-comercio'); f.reset(); $('#c-errores').hidden = true; $$('[aria-invalid]', f).forEach(i => i.removeAttribute('aria-invalid'));
+      $('#c-id').value = id ?? '';
+      setTxt($('#com-t'), id ? 'Editar comercio' : 'Nuevo comercio');
+      const c = id ? Datos.porId.get(id) : null;
+      const set = (k, v) => { $('#' + k).value = v ?? ''; };
+      if (c) {
+        set('c-nombre', c.nombre); set('c-categoria', c.categoria); set('c-tipo', c.tipo); set('c-barrio', c.barrio); set('c-direccion', c.direccion);
+        set('c-lat', c.lat); set('c-lng', c.lng); set('c-lv', c.horarios.lun_vie); set('c-sab', c.horarios.sab); set('c-dom', c.horarios.dom);
+        set('c-tel', c.telefono); set('c-aviso', c.aviso);
+      } else { set('c-lat', CONFIG.centro[0]); set('c-lng', CONFIG.centro[1]); }
+      Dlg.abrir($('#dlg-comercio'));
+    },
+    leerForm() {
+      const v = (id) => $('#' + id).value.trim();
+      const errores = [];
+      const marcar = (id, msg) => { errores.push(msg); $('#' + id).setAttribute('aria-invalid', 'true'); };
+      $$('#form-comercio [aria-invalid]').forEach(i => i.removeAttribute('aria-invalid'));
+      if (!v('c-nombre')) marcar('c-nombre', 'Falta el nombre.');
+      if (!v('c-direccion')) marcar('c-direccion', 'Falta la dirección.');
+      const lat = num(v('c-lat')), lng = num(v('c-lng'));
+      if (!(lat >= -90 && lat <= 90)) marcar('c-lat', 'La latitud debe ser un número entre -90 y 90 (ej. -38.95).');
+      if (!(lng >= -180 && lng <= 180)) marcar('c-lng', 'La longitud debe ser un número entre -180 y 180 (ej. -68.09).');
+      for (const [id, nombre, obligatorio] of [['c-lv', 'lunes a viernes', true], ['c-sab', 'sábado', false], ['c-dom', 'domingo', false]]) {
+        if (obligatorio && !v(id)) marcar(id, `Falta el horario de ${nombre}.`);
+        else if (parsearBloques(v(id)) === null) marcar(id, `Horario de ${nombre} no válido. Usá 08:00-13:00 y 17:00-20:30, o “Cerrado”.`);
+      }
+      if (v('c-tel') && !telefonoWa(v('c-tel'))) marcar('c-tel', 'El teléfono no parece válido. Probá con código de área, ej. 299 123-4567.');
+      return {
+        errores,
+        datos: {
+          nombre: v('c-nombre'), categoria: v('c-categoria'), tipo: v('c-tipo'), barrio: v('c-barrio'), direccion: v('c-direccion'), lat, lng,
+          horarios: { lun_vie: v('c-lv'), sab: v('c-sab') || 'Cerrado', dom: v('c-dom') || 'Cerrado' },
+          aviso: v('c-aviso') || null, telefono: v('c-tel')
+        }
+      };
+    },
+    guardarForm() {
+      const { errores, datos } = this.leerForm();
+      const box = $('#c-errores');
+      if (errores.length) { box.replaceChildren(h('ul', null, errores.map(e => h('li', null, e)))); box.hidden = false; $('[aria-invalid="true"]', $('#form-comercio'))?.focus(); return; }
+      const id = Number($('#c-id').value) || null;
+      const c = Datos.upsert(datos, id);
+      if (!c) { box.replaceChildren('No se pudo guardar: datos inválidos.'); box.hidden = false; return; }
+      Datos.guardar(); Dlg.cerrar($('#dlg-comercio')); this.despuesDeCambio();
+      Toast.mostrar(id ? 'Cambios guardados.' : 'Comercio agregado.');
+    },
+
+    exportar() {
+      const blob = new Blob([JSON.stringify(Datos.items.map(serializar), null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = h('a', { href: url, download: `locales-neuquen-${new Date().toISOString().slice(0, 10)}.json` });
+      document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+    },
+    async importar(archivo) {
+      if (!archivo) return;
+      if (archivo.size > 3 * 1024 * 1024) return Toast.mostrar('El archivo es demasiado grande (máx. 3 MB).', { error: true });
+      let lista;
+      try { const j = JSON.parse(await archivo.text()); lista = Array.isArray(j) ? j : j?.items; } catch { lista = null; }
+      if (!Array.isArray(lista)) return Toast.mostrar('El archivo no es un JSON válido de comercios.', { error: true });
+      const { items, descartados } = normalizarLista(lista);
+      if (!items.length) return Toast.mostrar('No se encontró ningún comercio válido en el archivo.', { error: true });
+      const ok = await Dlg.confirmar({ titulo: 'Importar comercios', mensaje: `Se reemplazarán los ${Datos.items.length} comercios actuales por ${items.length} del archivo${descartados ? ` (${descartados} descartados por datos inválidos)` : ''}.`, ok: 'Reemplazar', peligro: true });
+      if (!ok) return;
+      Datos.reemplazar(items); Datos.guardar(); this.despuesDeCambio(); Toast.mostrar('Datos importados.');
+    },
+    async restablecer() {
+      if (!await Dlg.confirmar({ titulo: 'Restablecer datos', mensaje: 'Se descartan los cambios hechos en este navegador y se vuelve a los datos publicados (o de ejemplo).', ok: 'Restablecer', peligro: true })) return;
+      await Datos.restablecer(); this.despuesDeCambio(); Toast.mostrar('Datos restablecidos.');
+    }
+  };
+
+  /* ===================================================================
+     13. EVENTOS E INICIO
+     =================================================================== */
+  function enlazarEventos() {
+    Dlg.iniciar();
+    const q = $('#busqueda');
+    const buscar = debounce(() => { Estado.q = q.value; refrescar({ encuadrar: true }); }, 140);
+    q.addEventListener('input', buscar);
+    q.addEventListener('search', buscar);
+    for (const k of ['rubro', 'horario', 'barrio', 'tipo', 'oferta']) {
+      $('#f-' + k).addEventListener('change', e => { Estado[k] = e.target.value; refrescar({ encuadrar: true }); });
+    }
+    $('#chip-favs').addEventListener('click', () => { Estado.soloFavs = !Estado.soloFavs; refrescar({ encuadrar: true }); });
+    $('#chip-cerca').addEventListener('click', alternarCerca);
+    $('#btn-limpiar').addEventListener('click', limpiarFiltros);
+    $('#lista-comercios').addEventListener('click', alAccion);
+    $$('#vista-switch button').forEach(b => b.addEventListener('click', () => setVista(b.dataset.vista)));
+
+    $('#btn-admin').addEventListener('click', () => Admin.abrir());
+    $('#form-login').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const err = await Admin.login($('#login-user').value.trim(), $('#login-pass').value);
+      const box = $('#login-error');
+      if (err) { box.textContent = err; box.hidden = false; $('#login-pass').select(); return; }
+      $('#form-login').reset(); Dlg.cerrar($('#dlg-login')); Admin.abrir(); Toast.mostrar('Sesión iniciada.');
+    });
+    $('#btn-logout').addEventListener('click', () => { Admin.logout(); Dlg.cerrar($('#dlg-admin')); Toast.mostrar('Sesión cerrada.'); });
+    $('#btn-nuevo').addEventListener('click', () => Admin.abrirForm());
+    $('#form-comercio').addEventListener('submit', (e) => { e.preventDefault(); Admin.guardarForm(); });
+    $('#btn-export').addEventListener('click', () => Admin.exportar());
+    $('#btn-import').addEventListener('click', () => $('#input-import').click());
+    $('#input-import').addEventListener('change', (e) => { Admin.importar(e.target.files[0]); e.target.value = ''; });
+    $('#btn-reset').addEventListener('click', () => Admin.restablecer());
+    $('#btn-usar-ubic').addEventListener('click', async (e) => {
+      const b = e.currentTarget; b.disabled = true;
+      try { const p = await Geo.obtener(); $('#c-lat').value = p.lat.toFixed(6); $('#c-lng').value = p.lng.toFixed(6); Toast.mostrar('Ubicación cargada. Revisala antes de guardar.'); }
+      catch (err) { Toast.mostrar(Geo.mensajeError(err), { error: true, ms: 5000 }); }
+      finally { b.disabled = false; }
+    });
+
+    /* Formulario "Publicá tu local": arma el mensaje y lo envía por WhatsApp (o lo deja listo para copiar) */
+    (() => {
+      const dlg = $('#dlg-solicitud'), f = $('#form-solicitud'), err = $('#s-errores'), res = $('#sol-resultado');
+      const llenar = (sel, items) => items.forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; sel.append(o); });
+      llenar($('#s-rubro'), [['', 'Elegí el rubro'], ...CATEGORIAS]);
+      llenar($('#s-barrio'), [['', 'Elegí el barrio'], ...BARRIOS.map(x => [x, x])]);
+      const val = (id, n) => $(id).value.trim().replace(/\s+/g, ' ').slice(0, n);
+      ['#btn-comerciante', '#btn-publicar'].forEach(q => $(q).addEventListener('click', () => { err.hidden = true; res.hidden = true; Dlg.abrir(dlg); }));
+      f.addEventListener('submit', e => {
+        e.preventDefault();
+        const d = { local: val('#s-nombre', 80), rubro: $('#s-rubro').value, barrio: $('#s-barrio').value, dir: val('#s-dir', 120), hor: val('#s-horarios', 160), nombre: val('#s-contacto', 60), tel: val('#s-tel', 30), aviso: val('#s-aviso', 160) };
+        const faltan = [];
+        if (!d.local) faltan.push('el nombre del local');
+        if (!d.rubro) faltan.push('el rubro');
+        if (!d.barrio) faltan.push('el barrio');
+        if (!d.dir) faltan.push('la dirección');
+        if (!d.hor) faltan.push('los horarios');
+        if (!d.nombre) faltan.push('tu nombre');
+        if (d.tel.replace(/\D/g, '').length < 8) faltan.push('un WhatsApp válido');
+        if (faltan.length) { err.textContent = 'Falta completar: ' + faltan.join(', ') + '.'; err.hidden = false; err.scrollIntoView({ block: 'nearest' }); return; }
+        err.hidden = true;
+        const msg = ['Hola, quiero publicar mi local en ' + CONFIG.nombreApp + '.', '',
+          'Local: ' + d.local, 'Rubro: ' + (CAT_LABEL.get(d.rubro) || d.rubro), 'Barrio: ' + d.barrio, 'Dirección: ' + d.dir,
+          'Horarios: ' + d.hor, d.aviso ? 'Aviso: ' + d.aviso : null, 'Contacto: ' + d.nombre + ' (' + d.tel + ')'].filter(x => x !== null).join('\n');
+        if (CONFIG.whatsappAdmin) {
+          window.open('https://wa.me/' + CONFIG.whatsappAdmin + '?text=' + encodeURIComponent(msg), '_blank', 'noopener');
+          Toast.mostrar('Abrimos WhatsApp para enviar tu solicitud.');
+          f.reset(); Dlg.cerrar(dlg);
+        } else {
+          $('#sol-texto').value = msg; res.hidden = false; res.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      });
+      $('#sol-copiar').addEventListener('click', async () => {
+        const t = $('#sol-texto');
+        try { await navigator.clipboard.writeText(t.value); } catch { t.select(); document.execCommand('copy'); }
+        Toast.mostrar('Mensaje copiado.', { ms: 2000 });
+      });
+    })();
+
+    window.addEventListener('offline', () => Toast.mostrar('Sin conexión. El listado sigue funcionando; el mapa puede no cargar.'));
+    window.addEventListener('online', () => { Toast.mostrar('Conexión recuperada.', { ms: 2000 }); if (!Mapa.listo) reintentarMapa(); else Mapa.tilesError = 0; });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refrescar(); });
+  }
+
+  async function iniciar() {
+    enlazarEventos();
+    Lista.iniciar(); Lista.cargando();
+    Admin.iniciar();
+    await Datos.cargar();
+    Favs.cargar();
+    poblarSelects();
+    refrescar();
+    Mapa.arrancar();                                     // asíncrono: nunca bloquea el listado
+    setInterval(() => refrescar(), 30000);               // estados de horario + hora; solo toca lo que cambió
+    if (!Local.persistente) Toast.mostrar('Tu navegador bloquea el almacenamiento: favoritos y cambios no se conservarán.', { ms: 5000 });
+  }
+  iniciar();
+})();
+</script>
+</body>
+</html>
