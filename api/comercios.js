@@ -85,6 +85,23 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, token: crearToken() });
     }
 
+    if (b.accion === 'geocodificar') {
+      const auth = String(req.headers.authorization || '');
+      if (!auth.startsWith('Bearer ') || !tokenOk(auth.slice(7))) return res.status(401).json({ ok: false, error: 'Sesión inválida' });
+      const dir = txt(b.q, 150);
+      if (dir.length < 3) return res.status(400).json({ ok: false, error: 'Dirección inválida' });
+      const consulta = /neuqu[eé]n/i.test(dir) ? dir : dir + ', Neuquén, Argentina';
+      const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=3&countrycodes=ar&viewbox=-68.20,-38.88,-67.95,-39.02&q=' + encodeURIComponent(consulta);
+      const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 7000);
+      try {
+        const r = await fetch(url, { signal: ctl.signal, headers: { 'User-Agent': 'LocalesNeuquen/1.0 (+https://' + (req.headers.host || 'sitio') + ')', 'Accept-Language': 'es' } });
+        if (!r.ok) return res.status(502).json({ ok: false, error: 'Buscador no disponible' });
+        const j = await r.json();
+        const resultados = (Array.isArray(j) ? j : []).map(x => ({ lat: Number(x.lat), lng: Number(x.lon), nombre: txt(x.display_name, 160) })).filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng));
+        return res.status(200).json({ ok: true, resultados });
+      } finally { clearTimeout(to); }
+    }
+
     if (b.accion === 'guardar') {
       const auth = String(req.headers.authorization || '');
       if (!auth.startsWith('Bearer ') || !tokenOk(auth.slice(7))) return res.status(401).json({ ok: false, error: 'Sesión inválida' });
