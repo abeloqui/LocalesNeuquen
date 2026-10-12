@@ -1,14 +1,20 @@
 <!DOCTYPE html>
 <html lang="es-AR">
 <head>
-
-  <link rel="apple-touch-icon" href="icon-192.png" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="description" content="Directorio comunitario libre de negocios, ferias y locales de Neuquén. Filtrá por rubro y horario. Sin rastreo." />
+  <meta name="description" content="Directorio comunitario de negocios, ferias y servicios de Neuquén. Hecho por vecinos. Filtrá por rubro, horario y barrio. Sin publicidad ni rastreo." />
   <meta name="color-scheme" content="light dark" />
-  <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)" />
-  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#0d5c63" />
+  <meta name="theme-color" content="#0d5c63" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0d5c63" media="(prefers-color-scheme: dark)" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="LocalesNQN" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
   <title>Locales Neuquén – Negocios, ferias y comercios</title>
 
   <!-- Leaflet CSS local; si falla, cae al CDN -->
@@ -164,7 +170,11 @@
     }
     .filtros::-webkit-scrollbar { display: none; }
     .filtros > * { flex: none; scroll-snap-align: start; }
-    .filtros select { width: auto; min-width: 9.5rem; font-size: .88rem; min-height: 36px; padding-block: .4rem; border-radius: 999px; }
+    .filtros select { width: auto; min-width: 8.5rem; max-width: 11rem; font-size: .88rem; min-height: 36px; padding-block: .4rem; border-radius: 999px; }
+    @media (max-width: 380px) {
+      .filtros select { min-width: 7.5rem; font-size: .82rem; }
+      .chip { padding: .35rem .7rem; font-size: .82rem; }
+    }
     .filtros select.activo { background-color: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
     .chip {
       display: inline-flex; align-items: center; gap: .35rem;
@@ -321,7 +331,7 @@
     .dist .ico { width: 1em; height: 1em; }
     .card-dir, .card-hoy { font-size: .86rem; color: var(--text-2); display: flex; gap: .4rem; align-items: baseline; }
     .card-hoy .ico, .card-dir .ico { transform: translateY(2px); }
-    .card-aviso { font-size: .84rem; background: var(--accent-soft); color: var(--accent-text); border-radius: 10px; padding: .45rem .65rem; margin-top: .2rem; line-height: 1.35; }
+    .card-aviso { font-size: .84rem; background: var(--fill); color: var(--text-2); border-radius: 10px; padding: .45rem .65rem; margin-top: .2rem; line-height: 1.35; border-left: 3px solid var(--sep); }
     .card-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin-top: .5rem; }
     .card-acciones .btn { flex: 1 1 auto; padding: .45rem .7rem; font-size: .84rem; gap: .3rem; }
     .card-acciones .fav { flex: none; margin: 0; }
@@ -504,7 +514,7 @@
           <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.500-3.500"/></svg></span>
           <input type="search" id="busqueda" placeholder="Buscar…" autocomplete="off" enterkeyhint="search" />
         </div>
-        <button type="button" class="btn btn-ocre btn-publicar" id="btn-publicar" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Publicar</button>
+        <button type="button" class="btn btn-ocre btn-publicar" id="btn-publicar" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Sumar</button>
         <button type="button" class="btn btn-admin" id="btn-admin" aria-haspopup="dialog">Admin</button>
       </div>
       <div class="filtros" role="group" aria-label="Filtros del listado" id="filtros">
@@ -514,7 +524,6 @@
         <label class="sr-only" for="f-horario">Horario</label><select id="f-horario"></select>
         <label class="sr-only" for="f-barrio">Barrio</label><select id="f-barrio"></select>
         <label class="sr-only" for="f-tipo">Tipo</label><select id="f-tipo"></select>
-        <label class="sr-only" for="f-oferta">Ofertas</label><select id="f-oferta"></select>
         <button type="button" class="chip chip-limpiar" id="btn-limpiar" hidden>Limpiar filtros</button>
       </div>
     </div>
@@ -529,8 +538,8 @@
       <div class="lista-scroll" id="lista-scroll">
         <ul class="lista" id="lista-comercios" role="list" aria-busy="true"></ul>
         <div class="pie">
-          <p>Directorio comunitario libre · Sin rastreo · Sin cuentas · Tus favoritos viven solo en este dispositivo</p>
-          <button type="button" id="btn-comerciante">¿Tenés un local o feria? Publicá o actualizá tu espacio</button>
+          <p>Directorio comunitario de Neuquén · Hecho por y para vecinos · Sin publicidad · Sin rastreo · Sin cuentas</p>
+          <button type="button" id="btn-comerciante">¿Tenés un local, feria o servicio? Sumalo al mapa</button>
         </div>
       </div>
     </section>
@@ -621,7 +630,7 @@
         <label for="c-tel">WhatsApp / teléfono (opcional)</label>
         <input type="tel" id="c-tel" inputmode="tel" placeholder="299 123-4567" autocomplete="off" />
       </div>
-      <div class="campo"><label for="c-aviso">Aviso u oferta del día (opcional)</label><input type="text" id="c-aviso" maxlength="160" /></div>
+      <div class="campo"><label for="c-aviso">Aviso o nota (opcional)</label><input type="text" id="c-aviso" maxlength="160" placeholder="Ej: Cerrado por feriado, nuevo horario..." /></div>
       <div class="acciones">
         <button type="button" class="btn btn-gris" data-cerrar>Cancelar</button>
         <button type="submit" class="btn btn-primario">Guardar</button>
@@ -631,8 +640,8 @@
 
   <dialog id="dlg-solicitud" class="ancho" aria-labelledby="sol-t">
     <form class="modal" id="form-solicitud" novalidate>
-      <h2 id="sol-t">Publicá tu local</h2>
-      <p class="sol-lead">Completá los datos y los revisamos antes de sumarlo al mapa. Es gratis.</p>
+      <h2 id="sol-t">Sumá tu espacio al mapa</h2>
+      <p class="sol-lead">Este es un directorio comunitario de vecinos. Completá los datos y los revisamos antes de publicarlos. Es gratis y sin publicidad.</p>
       <div class="error-box" id="s-errores" role="alert" hidden></div>
       <div class="campo"><label for="s-nombre">Nombre del local o feria *</label><input type="text" id="s-nombre" maxlength="80" autocomplete="organization" /></div>
       <div class="form-grid">
@@ -648,7 +657,7 @@
         <div class="campo"><label for="s-contacto">Tu nombre *</label><input type="text" id="s-contacto" maxlength="60" autocomplete="name" /></div>
         <div class="campo"><label for="s-tel">Tu WhatsApp *</label><input type="tel" id="s-tel" inputmode="tel" maxlength="30" placeholder="299 123-4567" autocomplete="tel" /></div>
       </div>
-      <div class="campo"><label for="s-aviso">Aviso u oferta (opcional)</label><input type="text" id="s-aviso" maxlength="160" /></div>
+      <div class="campo"><label for="s-aviso">Aviso o nota (opcional)</label><input type="text" id="s-aviso" maxlength="160" placeholder="Ej: Cerrado por feriado, nuevo horario..." /></div>
       <input type="text" id="s-web" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" />
       <div class="acciones">
         <button type="button" class="btn btn-gris" data-cerrar>Cancelar</button>
@@ -716,24 +725,24 @@
   const DATOS_INICIALES = [
     { id: 1, nombre: "Verdulería Don Pepe", categoria: "Verdulería", barrio: "Godoy", direccion: "Godoy 1850", lat: -38.9485, lng: -68.0850, horarios: { lun_vie: "08:00-13:00 y 17:00-20:30", sab: "08:00-14:00", dom: "Cerrado" }, aviso: "Hoy abrimos de corrido hasta las 14 hs" },
     { id: 2, nombre: "Farmacia del Centro", categoria: "Farmacia", barrio: "Centro", direccion: "Av. Argentina 320", lat: -38.9515, lng: -68.0595, horarios: { lun_vie: "09:00-13:00 y 16:30-20:00", sab: "09:00-13:00", dom: "Cerrado" }, aviso: null },
-    { id: 3, nombre: "Ferretería El Tornillo", categoria: "Ferretería", barrio: "Belgrano", direccion: "Belgrano 1450", lat: -38.9550, lng: -68.0780, horarios: { lun_vie: "08:30-12:30 y 16:00-19:30", sab: "08:30-13:00", dom: "Cerrado" }, aviso: "15% en pinturas hasta el viernes" },
+    { id: 3, nombre: "Ferretería El Tornillo", categoria: "Ferretería", barrio: "Belgrano", direccion: "Belgrano 1450", lat: -38.9550, lng: -68.0780, horarios: { lun_vie: "08:30-12:30 y 16:00-19:30", sab: "08:30-13:00", dom: "Cerrado" }, aviso: "Amplio stock de pinturas" },
     { id: 4, nombre: "Almacén La Esquina", categoria: "Almacén", barrio: "Cumelén", direccion: "Av. del Trabajador 2100", lat: -38.9460, lng: -68.0980, horarios: { lun_vie: "07:00-22:00", sab: "07:00-22:00", dom: "08:00-13:00" }, aviso: null },
     { id: 5, nombre: "Panadería Los Hornos", categoria: "Panadería", barrio: "Canal V", direccion: "Canal V y Godoy", lat: -38.9420, lng: -68.0880, horarios: { lun_vie: "06:30-13:00 y 16:00-20:00", sab: "06:30-13:00", dom: "07:00-12:00" }, aviso: "Facturas calientes todas las mañanas" },
     { id: 6, nombre: "Kiosco 24 hs El Paso", categoria: "Almacén", barrio: "San Lorenzo", direccion: "San Lorenzo 780", lat: -38.9580, lng: -68.0950, horarios: { lun_vie: "00:00-23:59", sab: "00:00-23:59", dom: "00:00-23:59" }, aviso: "Abierto las 24 horas" },
-    { id: 7, nombre: "Boutique Luna", categoria: "Indumentaria", barrio: "Centro", direccion: "Av. Argentina 890", lat: -38.9528, lng: -68.0610, horarios: { lun_vie: "10:00-13:30 y 17:00-21:00", sab: "10:00-14:00", dom: "Cerrado" }, aviso: "Nueva colección otoño" },
+    { id: 7, nombre: "Boutique Luna", categoria: "Indumentaria", barrio: "Centro", direccion: "Av. Argentina 890", lat: -38.9528, lng: -68.0610, horarios: { lun_vie: "10:00-13:30 y 17:00-21:00", sab: "10:00-14:00", dom: "Cerrado" }, aviso: null },
     { id: 8, nombre: "Feria de Emprendedores", categoria: "Feria", barrio: "Islas Malvinas", direccion: "Plaza Islas Malvinas", lat: -38.9440, lng: -68.0660, horarios: { lun_vie: "Cerrado", sab: "10:00-18:00", dom: "10:00-17:00" }, aviso: "Sábados y domingos · Productos locales" },
     { id: 9, nombre: "Café del Alto", categoria: "Gastronomía", barrio: "Centro", direccion: "San Martín 450", lat: -38.9505, lng: -68.0580, horarios: { lun_vie: "08:00-21:00", sab: "09:00-21:00", dom: "10:00-18:00" }, aviso: null },
-    { id: 10, nombre: "Ropa Urbana NQN", categoria: "Indumentaria", barrio: "Novella", direccion: "Pérez Novella 1100", lat: -38.9520, lng: -68.0890, horarios: { lun_vie: "10:00-13:00 y 17:00-20:30", sab: "10:00-14:00", dom: "Cerrado" }, aviso: "2x1 en remeras seleccionadas" },
+    { id: 10, nombre: "Ropa Urbana NQN", categoria: "Indumentaria", barrio: "Novella", direccion: "Pérez Novella 1100", lat: -38.9520, lng: -68.0890, horarios: { lun_vie: "10:00-13:00 y 17:00-20:30", sab: "10:00-14:00", dom: "Cerrado" }, aviso: null },
     { id: 11, nombre: "Carnicería El Buen Corte", categoria: "Carnicería", barrio: "Godoy", direccion: "Godoy 2100", lat: -38.9498, lng: -68.0905, horarios: { lun_vie: "08:00-13:00 y 17:00-20:00", sab: "08:00-14:00", dom: "Cerrado" }, aviso: null },
     { id: 12, nombre: "Librería Papel & Tinta", categoria: "Librería", barrio: "Belgrano", direccion: "Belgrano 800", lat: -38.9540, lng: -68.0750, horarios: { lun_vie: "09:00-13:00 y 16:00-19:30", sab: "09:00-13:00", dom: "Cerrado" }, aviso: null },
     { id: 13, nombre: "Peluquería Estilo", categoria: "Belleza", barrio: "Cumelén", direccion: "Av. del Trabajador 1850", lat: -38.9470, lng: -68.0960, horarios: { lun_vie: "09:00-13:00 y 16:00-20:00", sab: "09:00-14:00", dom: "Cerrado" }, aviso: "Turnos por WhatsApp" },
     { id: 14, nombre: "Feria del Trueque", categoria: "Feria", barrio: "Melipal", direccion: "Plaza Melipal", lat: -38.9360, lng: -68.0980, horarios: { lun_vie: "Cerrado", sab: "09:00-14:00", dom: "Cerrado" }, aviso: "Solo sábados de mañana" },
-    { id: 15, nombre: "Rotisería Doña Rosa", categoria: "Gastronomía", barrio: "Alta Barda", direccion: "Alta Barda 280", lat: -38.9410, lng: -68.0730, horarios: { lun_vie: "11:00-15:00 y 19:00-23:00", sab: "11:00-15:00 y 19:00-23:30", dom: "11:00-15:00" }, aviso: "Menú del día $4500" },
+    { id: 15, nombre: "Rotisería Doña Rosa", categoria: "Gastronomía", barrio: "Alta Barda", direccion: "Alta Barda 280", lat: -38.9410, lng: -68.0730, horarios: { lun_vie: "11:00-15:00 y 19:00-23:00", sab: "11:00-15:00 y 19:00-23:30", dom: "11:00-15:00" }, aviso: "Hay menú del día" },
     { id: 16, nombre: "Zapatos del Sur", categoria: "Calzado", barrio: "Centro", direccion: "Av. Argentina 1100", lat: -38.9535, lng: -68.0605, horarios: { lun_vie: "10:00-13:30 y 17:00-20:30", sab: "10:00-14:00", dom: "Cerrado" }, aviso: null },
     { id: 17, nombre: "Pet Shop Amigos", categoria: "Mascotas", barrio: "Novella", direccion: "Novella 420", lat: -38.9510, lng: -68.0860, horarios: { lun_vie: "09:00-13:00 y 16:30-20:00", sab: "09:00-13:00", dom: "Cerrado" }, aviso: "Vacunación los sábados" },
-    { id: 18, nombre: "Celulares NQN", categoria: "Electrónica", barrio: "Centro", direccion: "San Martín 780", lat: -38.9510, lng: -68.0575, horarios: { lun_vie: "10:00-13:30 y 17:00-21:00", sab: "10:00-14:00", dom: "Cerrado" }, aviso: "Fundas desde $2500" },
+    { id: 18, nombre: "Celulares NQN", categoria: "Electrónica", barrio: "Centro", direccion: "San Martín 780", lat: -38.9510, lng: -68.0575, horarios: { lun_vie: "10:00-13:30 y 17:00-21:00", sab: "10:00-14:00", dom: "Cerrado" }, aviso: null },
     { id: 19, nombre: "Deportes Patagonia", categoria: "Deportes", barrio: "Belgrano", direccion: "Belgrano 1200", lat: -38.9545, lng: -68.0770, horarios: { lun_vie: "10:00-13:00 y 16:30-20:00", sab: "10:00-14:00", dom: "Cerrado" }, aviso: null },
-    { id: 20, nombre: "Florería Primavera", categoria: "Floristería", barrio: "Islas Malvinas", direccion: "Islas Malvinas 210", lat: -38.9435, lng: -68.0670, horarios: { lun_vie: "09:00-13:00 y 16:00-20:00", sab: "09:00-14:00", dom: "09:00-13:00" }, aviso: "Ramos del día" },
+    { id: 20, nombre: "Florería Primavera", categoria: "Floristería", barrio: "Islas Malvinas", direccion: "Islas Malvinas 210", lat: -38.9435, lng: -68.0670, horarios: { lun_vie: "09:00-13:00 y 16:00-20:00", sab: "09:00-14:00", dom: "09:00-13:00" }, aviso: "Ramos frescos" },
     { id: 21, nombre: "Óptica Visión Clara", categoria: "Óptica", barrio: "Centro", direccion: "Av. Argentina 560", lat: -38.9520, lng: -68.0590, horarios: { lun_vie: "09:30-13:00 y 16:30-20:00", sab: "09:30-13:00", dom: "Cerrado" }, aviso: null },
     { id: 22, nombre: "Lavadero Express", categoria: "Lavandería", barrio: "Godoy", direccion: "Godoy 1600", lat: -38.9480, lng: -68.0870, horarios: { lun_vie: "08:00-13:00 y 16:00-20:00", sab: "08:00-14:00", dom: "Cerrado" }, aviso: "Retiro y entrega a domicilio" }
   ];
@@ -1079,27 +1088,45 @@
       } catch { return null; } finally { clearTimeout(to); }
     },
     async cargar() {
-      const srv = await this._desdeServidor();
-      if (srv && (srv.items.length || srv.inicializado)) { this._poner(srv.items); this.origen = 'servidor'; Local.borrar(CONFIG.claves.datos); return; }
-      const raw = Local.crudo(CONFIG.claves.datos);
-      if (raw != null) {
-        let lista = null;
-        try { const p = JSON.parse(raw); lista = Array.isArray(p) ? p : p?.items; } catch { lista = null; }
-        if (Array.isArray(lista)) {
-          const { items, descartados } = normalizarLista(lista);
-          if (items.length || lista.length === 0) {
-            this._poner(items); this.origen = 'local';
-            if (descartados) Toast.mostrar(`Se ignoraron ${descartados} registros dañados.`, { error: true });
-            return;
-          }
+      // Cadena de fallbacks tolerante a fallos de red / API / almacenamiento.
+      // Nunca deja la UI colgada en "Cargando…".
+      try {
+        const srv = await this._desdeServidor();
+        if (srv && (srv.items.length || srv.inicializado)) {
+          this._poner(srv.items); this.origen = 'servidor';
+          try { Local.borrar(CONFIG.claves.datos); } catch (_) {}
+          return;
         }
-        // Datos corruptos: se guarda una copia para poder recuperarlos a mano y se parte de cero.
-        Local.escribir(CONFIG.claves.datos + '_corrupto', raw);
-        Local.borrar(CONFIG.claves.datos);
-        Toast.mostrar('Los datos guardados estaban dañados. Se restauraron los de ejemplo.', { error: true, ms: 5000 });
-      }
-      const remotos = await this._desdeFuente();
-      if (remotos) { this._poner(remotos); this.origen = 'archivo'; return; }
+      } catch (_) { /* red o API caída */ }
+
+      try {
+        const raw = Local.crudo(CONFIG.claves.datos);
+        if (raw != null) {
+          let lista = null;
+          try { const p = JSON.parse(raw); lista = Array.isArray(p) ? p : p?.items; } catch { lista = null; }
+          if (Array.isArray(lista)) {
+            const { items, descartados } = normalizarLista(lista);
+            if (items.length || lista.length === 0) {
+              this._poner(items); this.origen = 'local';
+              if (descartados) Toast.mostrar(`Se ignoraron ${descartados} registros dañados.`, { error: true });
+              return;
+            }
+          }
+          // Datos corruptos: se guarda una copia y se parte de cero.
+          try {
+            Local.escribir(CONFIG.claves.datos + '_corrupto', raw);
+            Local.borrar(CONFIG.claves.datos);
+          } catch (_) {}
+          Toast.mostrar('Los datos guardados estaban dañados. Se restauraron los de ejemplo.', { error: true, ms: 5000 });
+        }
+      } catch (_) { /* localStorage bloqueado o error de lectura */ }
+
+      try {
+        const remotos = await this._desdeFuente();
+        if (remotos) { this._poner(remotos); this.origen = 'archivo'; return; }
+      } catch (_) { /* fetch de comercios.json falló (offline sin caché) */ }
+
+      // Último recurso: datos de ejemplo embebidos
       this._poner(normalizarLista(DATOS_INICIALES).items); this.origen = 'ejemplo';
     },
     async guardar() {
@@ -1174,7 +1201,7 @@
     const t = ahora(), e = estadoDe(c, t);
     const l = [`*${c.nombre}* · ${CAT_LABEL.get(c.categoria)}`, `📍 ${c.direccion}, ${c.barrio}`,
                `🕒 Hoy: ${horarioHoy(c, t)} (${textoEstado(e.clave)})`];
-    if (c.aviso) l.push(`📢 ${c.aviso}`);
+    if (c.aviso) l.push(`ℹ️ ${c.aviso}`);
     l.push(`🗺️ ${urlOSM(c)}`);
     const base = /^https?:$/.test(location.protocol) ? ` · ${location.origin}${location.pathname}` : '';
     l.push(`Visto en ${CONFIG.nombreApp}${base}`);
@@ -1201,8 +1228,8 @@
   /* ===================================================================
      8. ESTADO DE LA INTERFAZ
      =================================================================== */
-  const Estado = { q: '', rubro: '', horario: '', tipo: '', oferta: '', barrio: '', soloFavs: false, cerca: false, sel: null };
-  const hayFiltros = () => !!(Estado.q || Estado.rubro || Estado.horario || Estado.tipo || Estado.oferta || Estado.barrio || Estado.soloFavs);
+  const Estado = { q: '', rubro: '', horario: '', tipo: '', barrio: '', soloFavs: false, cerca: false, sel: null };
+  const hayFiltros = () => !!(Estado.q || Estado.rubro || Estado.horario || Estado.tipo || Estado.barrio || Estado.soloFavs);
 
   function filtrar(t) {
     const palabras = norm(Estado.q).split(' ').filter(Boolean);
@@ -1210,7 +1237,6 @@
       (!Estado.rubro || c.categoria === Estado.rubro) &&
       (!Estado.barrio || c.barrio === Estado.barrio) &&
       (!Estado.tipo || c.tipo === Estado.tipo) &&
-      (!Estado.oferta || c.aviso) &&
       (!Estado.soloFavs || Favs.tiene(c.id)) &&
       palabras.every(w => c._q.includes(w)) &&
       coincideFranja(c, Estado.horario, t));
@@ -1262,7 +1288,7 @@
         h('div', { class: 'card-estado' }, refs.badge, refs.detalle, refs.dist),
         h('p', { class: 'card-dir' }, ico('pin'), h('span', null, `${c.direccion} · ${c.barrio}`)),
         h('p', { class: 'card-hoy' }, ico('clock'), refs.hoy),
-        c.aviso ? h('div', { class: 'card-aviso' }, '📢 ', c.aviso) : null,
+        c.aviso ? h('div', { class: 'card-aviso' }, c.aviso) : null,
         crearAcciones(c, { verEnMapa: true }));
       const rec = { el: li, refs, rev: c.rev, mapa: Mapa.listo };
       this.cache.set(c.id, rec);
@@ -1401,7 +1427,7 @@
         h('div', { class: 'card-estado' }, h('span', { class: 'badge ' + e.clave }, textoEstado(e.clave)), h('span', { class: 'detalle' }, e.detalle)),
         h('span', { class: 'card-dir' }, `${c.direccion} · ${c.barrio}`),
         h('span', { class: 'card-hoy' }, 'Hoy: ' + horarioHoy(c, t)),
-        c.aviso ? h('div', { class: 'card-aviso' }, '📢 ', c.aviso) : null,
+        c.aviso ? h('div', { class: 'card-aviso' }, c.aviso) : null,
         botonFav(c),
         crearAcciones(c));
     },
@@ -1508,9 +1534,9 @@
     if (v === 'mapa' && Mapa.listo) Mapa.alRedimensionar();     // síncrono: el mapa debe conocer su tamaño antes de moverse
   }
   function limpiarFiltros() {
-    Object.assign(Estado, { q: '', rubro: '', horario: '', tipo: '', oferta: '', barrio: '', soloFavs: false });
+    Object.assign(Estado, { q: '', rubro: '', horario: '', tipo: '', barrio: '', soloFavs: false });
     $('#busqueda').value = '';
-    ['rubro', 'horario', 'barrio', 'tipo', 'oferta'].forEach(k => { $('#f-' + k).value = ''; });
+    ['rubro', 'horario', 'barrio', 'tipo'].forEach(k => { $('#f-' + k).value = ''; });
     refrescar({ encuadrar: true });
   }
 
@@ -1552,7 +1578,6 @@
     poblarSelect($('#f-horario'), FRANJAS.slice(1), FRANJAS[0][1]);
     poblarSelect($('#f-barrio'), barriosActuales().map(b => [b, b]), 'Toda la ciudad');
     poblarSelect($('#f-tipo'), Object.entries(TIPOS), 'Todos los tipos');
-    poblarSelect($('#f-oferta'), [['si', 'Solo con oferta']], 'Con o sin oferta');
     poblarSelect($('#c-categoria'), CATEGORIAS);
     poblarSelect($('#c-tipo'), Object.entries(TIPOS));
     poblarSelect($('#c-barrio'), barriosActuales().map(b => [b, b]));
@@ -1742,7 +1767,7 @@
     const buscar = debounce(() => { Estado.q = q.value; refrescar({ encuadrar: true }); }, 140);
     q.addEventListener('input', buscar);
     q.addEventListener('search', buscar);
-    for (const k of ['rubro', 'horario', 'barrio', 'tipo', 'oferta']) {
+    for (const k of ['rubro', 'horario', 'barrio', 'tipo']) {
       $('#f-' + k).addEventListener('change', e => { Estado[k] = e.target.value; refrescar({ encuadrar: true }); });
     }
     $('#chip-favs').addEventListener('click', () => { Estado.soloFavs = !Estado.soloFavs; refrescar({ encuadrar: true }); });
@@ -1774,7 +1799,7 @@
       finally { b.disabled = false; }
     });
 
-    /* Formulario "Publicá tu local": arma el mensaje y lo envía por WhatsApp (o lo deja listo para copiar) */
+    /* Formulario "Sumá tu espacio al mapa": arma el mensaje y lo envía por WhatsApp (o lo deja listo para copiar) */
     (() => {
       const dlg = $('#dlg-solicitud'), f = $('#form-solicitud'), err = $('#s-errores'), res = $('#sol-resultado');
       const llenar = (sel, items) => items.forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; sel.append(o); });
@@ -1825,6 +1850,13 @@
   }
 
   async function iniciar() {
+    // Registro del Service Worker (PWA / offline). Fallo silencioso para no bloquear la app.
+    if ('serviceWorker' in navigator) {
+      try {
+        await navigator.serviceWorker.register('./sw.js', { scope: './' });
+      } catch (_) { /* SW no disponible o error de registro */ }
+    }
+
     enlazarEventos();
     Lista.iniciar(); Lista.cargando();
     Admin.iniciar();
@@ -1835,11 +1867,6 @@
     Mapa.arrancar();                                     // asíncrono: nunca bloquea el listado
     setInterval(() => refrescar(), 30000);               // estados de horario + hora; solo toca lo que cambió
     if (!Local.persistente) Toast.mostrar('Tu navegador bloquea el almacenamiento: favoritos y cambios no se conservarán.', { ms: 5000 });
-    // Registrar Service Worker para soporte offline / PWA
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch((err) => {
-        console.error('Error registrando SW:', err);
-      });
   }
   iniciar();
 })();

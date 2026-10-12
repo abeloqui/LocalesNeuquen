@@ -1,0 +1,29 @@
+{
+  "name": "Locales Neuquén",
+  "short_name": "LocalesNQN",
+  "description": "Directorio comunitario de negocios, ferias y servicios de Neuquén. Hecho por vecinos.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ebeee8",
+  "theme_color": "#0d5c63",
+  "lang": "es-AR",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["lifestyle", "navigation", "utilities"],
+  "prefer_related_applications": false
+}

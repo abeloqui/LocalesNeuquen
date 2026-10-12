@@ -44,7 +44,7 @@
       "sab": "08:30-13:00",
       "dom": "Cerrado"
     },
-    "aviso": "15% en pinturas hasta el viernes",
+    "aviso": "Amplio stock de pinturas",
     "telefono": ""
   },
   {
@@ -108,7 +108,7 @@
       "sab": "10:00-14:00",
       "dom": "Cerrado"
     },
-    "aviso": "Nueva colección otoño",
+    "aviso": null,
     "telefono": ""
   },
   {
@@ -156,7 +156,7 @@
       "sab": "10:00-14:00",
       "dom": "Cerrado"
     },
-    "aviso": "2x1 en remeras seleccionadas",
+    "aviso": null,
     "telefono": ""
   },
   {
@@ -236,7 +236,7 @@
       "sab": "11:00-15:00 y 19:00-23:30",
       "dom": "11:00-15:00"
     },
-    "aviso": "Menú del día $4500",
+    "aviso": "Hay menú del día",
     "telefono": ""
   },
   {
@@ -284,7 +284,7 @@
       "sab": "10:00-14:00",
       "dom": "Cerrado"
     },
-    "aviso": "Fundas desde $2500",
+    "aviso": null,
     "telefono": ""
   },
   {
@@ -316,7 +316,7 @@
       "sab": "09:00-14:00",
       "dom": "09:00-13:00"
     },
-    "aviso": "Ramos del día",
+    "aviso": "Ramos frescos",
     "telefono": ""
   },
   {
