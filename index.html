@@ -474,6 +474,7 @@
     .btn-publicar { flex: none; padding-inline: .9rem; gap: .35rem; font-weight: 650; }
     .btn-publicar svg { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
     .pie button { background: var(--ocre); color: #fff; padding: .6rem 1rem; border-radius: 999px; font-weight: 650; }
+    #c-mapa { height: 250px; border-radius: var(--r-sm); overflow: hidden; background: var(--fill); }
     .sol-lead { color: var(--text-2); font-size: .92rem; line-height: 1.45; margin: .25rem 0 1.1rem; }
     .modal h2 { font-family: var(--serif); font-weight: 700; }
     #dlg-solicitud textarea, #sol-resultado textarea {
@@ -599,6 +600,11 @@
         <div class="campo"><label for="c-lat">Latitud *</label><input type="text" id="c-lat" inputmode="decimal" placeholder="-38.95" required /></div>
         <div class="campo"><label for="c-lng">Longitud *</label><input type="text" id="c-lng" inputmode="decimal" placeholder="-68.09" required /></div>
       </div>
+      <div class="campo">
+        <button type="button" class="btn btn-ocre" id="btn-buscar-dir">Buscar la dirección en el mapa</button>
+        <p class="ayuda">Usa la dirección que escribiste arriba. Después tocá el mapa para ajustar el punto exacto.</p>
+      </div>
+      <div class="campo" id="c-mapa-wrap" hidden><div id="c-mapa"></div></div>
       <div class="campo"><button type="button" class="btn btn-tint" id="btn-usar-ubic">Usar mi ubicación actual</button></div>
       <div class="campo">
         <label for="c-lv">Horario lunes a viernes *</label>
@@ -1572,6 +1578,52 @@
   /* ===================================================================
      12. ADMIN: sesión, login, CRUD, importar / exportar
      =================================================================== */
+  /* Mapa del formulario: tocá para marcar el punto; también se completa al buscar la dirección */
+  const MapaForm = {
+    map: null, punto: null, enlazado: false,
+    iniciar() {
+      const wrap = $('#c-mapa-wrap');
+      if (!window.L?.map) { wrap.hidden = true; return false; }
+      wrap.hidden = false;
+      if (!this.map) {
+        this.map = window.L.map('c-mapa', { zoomControl: true }).setView(CONFIG.centro, 14);
+        window.L.tileLayer(CONFIG.tiles.url, { maxZoom: 19, attribution: CONFIG.tiles.attribution }).addTo(this.map);
+        this.map.on('click', e => this.poner(e.latlng.lat, e.latlng.lng, false));
+      }
+      if (!this.enlazado) { this.enlazado = true; ['c-lat', 'c-lng'].forEach(id => $('#' + id).addEventListener('change', () => this.desdeInputs())); }
+      return true;
+    },
+    poner(lat, lng, centrar = true) {
+      $('#c-lat').value = lat.toFixed(6); $('#c-lng').value = lng.toFixed(6);
+      if (!this.map) return;
+      if (this.punto) this.punto.setLatLng([lat, lng]);
+      else this.punto = window.L.circleMarker([lat, lng], { radius: 11, weight: 3, color: '#fff', fillColor: '#a5560f', fillOpacity: 1 }).addTo(this.map);
+      if (centrar) this.map.setView([lat, lng], Math.max(this.map.getZoom(), 17));
+    },
+    desdeInputs() {
+      if (!this.map) return;
+      const lat = parseFloat(String($('#c-lat').value).replace(',', '.')), lng = parseFloat(String($('#c-lng').value).replace(',', '.'));
+      if (Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) this.poner(lat, lng);
+      else { if (this.punto) { this.punto.remove(); this.punto = null; } this.map.setView(CONFIG.centro, 14); }
+    },
+    refrescar() { if (this.map) { this.map.invalidateSize(); if (this.punto) this.map.setView(this.punto.getLatLng(), Math.max(this.map.getZoom(), 17)); } },
+    async buscar(e) {
+      const dir = $('#c-direccion').value.trim();
+      if (!dir) return Toast.mostrar('Escribí primero la dirección.', { error: true });
+      const b = e.currentTarget; b.disabled = true;
+      try {
+        const r = await fetch('/api/comercios', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (Sesion.crudo(CONFIG.claves.sesion) || '') }, body: JSON.stringify({ accion: 'geocodificar', q: dir }) });
+        if (r.status === 401) { Admin.logout(); Dlg.cerrar($('#dlg-comercio')); return Toast.mostrar('La sesión venció. Volvé a ingresar.', { error: true, ms: 5000 }); }
+        const j = await r.json().catch(() => ({}));
+        const p = j.resultados && j.resultados[0];
+        if (!r.ok || !p) return Toast.mostrar('No encontramos esa dirección. Tocá el mapa para marcarla.', { error: true, ms: 5000 });
+        this.poner(p.lat, p.lng);
+        Toast.mostrar('Ubicación encontrada. Tocá el mapa si hay que ajustarla.', { ms: 4500 });
+      } catch { Toast.mostrar('No se pudo buscar la dirección. Tocá el mapa para marcarla.', { error: true, ms: 5000 }); }
+      finally { b.disabled = false; }
+    }
+  };
+
   const Admin = {
     logueado: false, intentos: 0, bloqueadoHasta: 0,
     iniciar() { const t = Sesion.crudo(CONFIG.claves.sesion) || ''; this.logueado = Number(t.split('.')[0]) > Date.now() / 1000; if (!this.logueado) Sesion.borrar(CONFIG.claves.sesion); this.pintarBoton(); },
@@ -1616,8 +1668,9 @@
         set('c-nombre', c.nombre); set('c-categoria', c.categoria); set('c-tipo', c.tipo); set('c-barrio', c.barrio); set('c-direccion', c.direccion);
         set('c-lat', c.lat); set('c-lng', c.lng); set('c-lv', c.horarios.lun_vie); set('c-sab', c.horarios.sab); set('c-dom', c.horarios.dom);
         set('c-tel', c.telefono); set('c-aviso', c.aviso);
-      } else { set('c-lat', CONFIG.centro[0]); set('c-lng', CONFIG.centro[1]); }
+      } else { set('c-lat', ''); set('c-lng', ''); }
       Dlg.abrir($('#dlg-comercio'));
+      if (MapaForm.iniciar()) { MapaForm.desdeInputs(); setTimeout(() => MapaForm.refrescar(), 350); }
     },
     leerForm() {
       const v = (id) => $('#' + id).value.trim();
@@ -1711,9 +1764,10 @@
     $('#btn-import').addEventListener('click', () => $('#input-import').click());
     $('#input-import').addEventListener('change', (e) => { Admin.importar(e.target.files[0]); e.target.value = ''; });
     $('#btn-reset').addEventListener('click', () => Admin.restablecer());
+    $('#btn-buscar-dir').addEventListener('click', (e) => MapaForm.buscar(e));
     $('#btn-usar-ubic').addEventListener('click', async (e) => {
       const b = e.currentTarget; b.disabled = true;
-      try { const p = await Geo.obtener(); $('#c-lat').value = p.lat.toFixed(6); $('#c-lng').value = p.lng.toFixed(6); Toast.mostrar('Ubicación cargada. Revisala antes de guardar.'); }
+      try { const p = await Geo.obtener(); MapaForm.poner(p.lat, p.lng); Toast.mostrar('Ubicación cargada. Revisala antes de guardar.'); }
       catch (err) { Toast.mostrar(Geo.mensajeError(err), { error: true, ms: 5000 }); }
       finally { b.disabled = false; }
     });
