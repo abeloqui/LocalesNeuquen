@@ -685,11 +685,7 @@
       url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     },
-    claves: { datos: 'locales_neuquen_comercios', favoritos: 'locales_neuquen_favoritos', sesion: 'locales_neuquen_admin' },
-    /* Credencial admin: hash SHA-256 de "sal:usuario:contraseña". Contraseña actual = la del original.
-       Para cambiarla: en la consola del navegador ejecutá  await __hash('sal','usuario','nueva')  y pegá el resultado.
-       OJO: es una barrera de interfaz, no seguridad real (ver notas). */
-    admin: { usuario: 'admin', sal: 'locales-nqn', hash: 'b610897dffa508d439d82e0f34454a9f46d81522a3b90348278fc134299f2d43' }
+    claves: { datos: 'locales_neuquen_comercios', favoritos: 'locales_neuquen_favoritos', sesion: 'locales_neuquen_admin' }
   };
 
   const CATEGORIAS = [
@@ -1064,7 +1060,19 @@
         return res.items.length ? res.items : null;
       } catch { return null; } finally { clearTimeout(to); }
     },
+    async _desdeServidor() {
+      const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 5000);
+      try {
+        const r = await fetch('/api/comercios', { signal: ctl.signal, cache: 'no-cache' });
+        if (!r.ok) return null;
+        const j = await r.json();
+        if (!j || !Array.isArray(j.items)) return null;
+        return { items: normalizarLista(j.items).items, inicializado: !!j.inicializado };
+      } catch { return null; } finally { clearTimeout(to); }
+    },
     async cargar() {
+      const srv = await this._desdeServidor();
+      if (srv && (srv.items.length || srv.inicializado)) { this._poner(srv.items); this.origen = 'servidor'; Local.borrar(CONFIG.claves.datos); return; }
       const raw = Local.crudo(CONFIG.claves.datos);
       if (raw != null) {
         let lista = null;
@@ -1086,12 +1094,20 @@
       if (remotos) { this._poner(remotos); this.origen = 'archivo'; return; }
       this._poner(normalizarLista(DATOS_INICIALES).items); this.origen = 'ejemplo';
     },
-    guardar() {
-      const ok = Local.escribir(CONFIG.claves.datos, { v: 2, items: this.items.map(serializar) });
-      this.persistenteOk = ok && Local.persistente;
-      if (!ok) Toast.mostrar('No se pudo guardar en este navegador (almacenamiento lleno o bloqueado). Exportá un respaldo.', { error: true, ms: 6000 });
-      else if (!Local.persistente) Toast.mostrar('Navegación privada: los cambios se perderán al cerrar. Exportá un respaldo.', { ms: 5000 });
-      return ok;
+    async guardar() {
+      const token = Sesion.crudo(CONFIG.claves.sesion) || '';
+      try {
+        const r = await fetch('/api/comercios', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ accion: 'guardar', items: this.items.map(serializar) })
+        });
+        if (r.status === 401) { Admin.logout(); Toast.mostrar('La sesión venció. Volvé a ingresar.', { error: true, ms: 5000 }); await this.cargar(); return false; }
+        if (!r.ok) throw new Error('http');
+        this.origen = 'servidor'; return true;
+      } catch {
+        Toast.mostrar('No se pudo guardar en el servidor. Probá de nuevo.', { error: true, ms: 5000 });
+        await this.cargar(); return false;
+      }
     },
     upsert(datos, id) {
       if (id) {
@@ -1558,7 +1574,7 @@
      =================================================================== */
   const Admin = {
     logueado: false, intentos: 0, bloqueadoHasta: 0,
-    iniciar() { this.logueado = Sesion.crudo(CONFIG.claves.sesion) === '1'; this.pintarBoton(); },
+    iniciar() { const t = Sesion.crudo(CONFIG.claves.sesion) || ''; this.logueado = Number(t.split('.')[0]) > Date.now() / 1000; if (!this.logueado) Sesion.borrar(CONFIG.claves.sesion); this.pintarBoton(); },
     pintarBoton() {
       const b = $('#btn-admin');
       setTxt(b, this.logueado ? 'Panel ✓' : 'Admin');
@@ -1566,14 +1582,13 @@
     },
     abrir() { if (this.logueado) { this.renderLista(); Dlg.abrir($('#dlg-admin')); } else { $('#login-error').hidden = true; Dlg.abrir($('#dlg-login')); } },
     async login(usuario, clave) {
-      const falta = this.bloqueadoHasta - Date.now();
-      if (falta > 0) return `Demasiados intentos. Esperá ${Math.ceil(falta / 1000)} s.`;
-      const hash = await sha256(`${CONFIG.admin.sal}:${usuario}:${clave}`);
-      if (usuario === CONFIG.admin.usuario && hash === CONFIG.admin.hash) {
-        this.intentos = 0; this.logueado = true; Sesion.escribir(CONFIG.claves.sesion, '1'); this.pintarBoton(); return null;
-      }
-      if (++this.intentos >= 5) { this.bloqueadoHasta = Date.now() + 30000; this.intentos = 0; }
-      return 'Usuario o contraseña incorrectos.';
+      try {
+        const r = await fetch('/api/comercios', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accion: 'login', usuario, clave }) });
+        const j = await r.json().catch(() => ({}));
+        if (r.status === 429) return 'Demasiados intentos. Esperá unos minutos.';
+        if (!r.ok || !j.token) return 'Usuario o contraseña incorrectos.';
+        this.logueado = true; Sesion.escribir(CONFIG.claves.sesion, j.token); this.pintarBoton(); return null;
+      } catch { return 'No se pudo conectar. Probá de nuevo.'; }
     },
     logout() { this.logueado = false; Sesion.borrar(CONFIG.claves.sesion); this.pintarBoton(); },
 
@@ -1587,7 +1602,7 @@
     },
     async borrar(c) {
       if (!await Dlg.confirmar({ titulo: '¿Eliminar comercio?', mensaje: `Se eliminará “${c.nombre}”. Podés exportar un respaldo antes.`, ok: 'Eliminar', peligro: true })) return;
-      Datos.eliminar(c.id); Datos.guardar(); this.despuesDeCambio(); Toast.mostrar('Comercio eliminado.');
+      Datos.eliminar(c.id); const guardado = await Datos.guardar(); this.despuesDeCambio(); if (guardado) Toast.mostrar('Comercio eliminado.');
     },
     despuesDeCambio() { poblarSelects(); this.renderLista(); refrescar(); },
 
@@ -1628,15 +1643,15 @@
         }
       };
     },
-    guardarForm() {
+    async guardarForm() {
       const { errores, datos } = this.leerForm();
       const box = $('#c-errores');
       if (errores.length) { box.replaceChildren(h('ul', null, errores.map(e => h('li', null, e)))); box.hidden = false; $('[aria-invalid="true"]', $('#form-comercio'))?.focus(); return; }
       const id = Number($('#c-id').value) || null;
       const c = Datos.upsert(datos, id);
       if (!c) { box.replaceChildren('No se pudo guardar: datos inválidos.'); box.hidden = false; return; }
-      Datos.guardar(); Dlg.cerrar($('#dlg-comercio')); this.despuesDeCambio();
-      Toast.mostrar(id ? 'Cambios guardados.' : 'Comercio agregado.');
+      const guardado = await Datos.guardar(); Dlg.cerrar($('#dlg-comercio')); this.despuesDeCambio();
+      if (guardado) Toast.mostrar(id ? 'Cambios guardados.' : 'Comercio agregado.');
     },
 
     exportar() {
@@ -1655,7 +1670,7 @@
       if (!items.length) return Toast.mostrar('No se encontró ningún comercio válido en el archivo.', { error: true });
       const ok = await Dlg.confirmar({ titulo: 'Importar comercios', mensaje: `Se reemplazarán los ${Datos.items.length} comercios actuales por ${items.length} del archivo${descartados ? ` (${descartados} descartados por datos inválidos)` : ''}.`, ok: 'Reemplazar', peligro: true });
       if (!ok) return;
-      Datos.reemplazar(items); Datos.guardar(); this.despuesDeCambio(); Toast.mostrar('Datos importados.');
+      Datos.reemplazar(items); const guardado = await Datos.guardar(); this.despuesDeCambio(); if (guardado) Toast.mostrar('Datos importados.');
     },
     async restablecer() {
       if (!await Dlg.confirmar({ titulo: 'Restablecer datos', mensaje: 'Se descartan los cambios hechos en este navegador y se vuelve a los datos publicados (o de ejemplo).', ok: 'Restablecer', peligro: true })) return;
