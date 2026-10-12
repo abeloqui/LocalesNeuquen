@@ -1,25 +1,31 @@
 'use strict';
 
-const CACHE_NAME = 'locales-nqn-v1';
+const CACHE_NAME = 'locales-nqn-v2';
 const ASSETS_ESTATICOS = [
-  '/',
-  '/index.html',
-  '/leaflet.css',
-  '/leaflet.js',
-  '/comercios.json',
-  '/manifest.json'
+  './',
+  './index.html',
+  './leaflet.css',
+  './leaflet.js',
+  './comercios.json',
+  './manifest.json'
 ];
 
-// Instalación: guardar assets estáticos en caché
+// Instalación: intenta guardar assets en caché individualmente para que si uno falla no rompa todo
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_ESTATICOS);
+    caches.open(CACHE_NAME).then(async (cache) => {
+      for (const asset of ASSETS_ESTATICOS) {
+        try {
+          await cache.add(asset);
+        } catch (e) {
+          console.warn('No se pudo cachear:', asset);
+        }
+      }
     }).then(() => self.skipWaiting())
   );
 });
 
-// Activación: limpiar cachés antiguas
+// Activación: elimina cachés viejas
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -34,13 +40,13 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Ignorar peticiones POST o a endpoints de API de modificación/mails
+  // Ignorar métodos que no sean GET y llamados a Serverless Functions (/api/...)
   if (event.request.method !== 'GET' || url.pathname.startsWith('/api/')) {
     return;
   }
 
-  // Estrategia Network-First para la lista pública de comercios (/api/comercios o comercios.json)
-  if (url.pathname.includes('comercios')) {
+  // Para comercios.json: Network first, fallback a caché
+  if (url.pathname.includes('comercios.json')) {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
@@ -55,19 +61,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Estrategia Cache-First para HTML, CSS, JS e imágenes
+  // Para HTML / CSS / JS: Stale-While-Revalidate (devuelve caché rápido y actualiza de fondo)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Actualizar caché en segundo plano
-        fetch(event.request).then((networkResponse) => {
-          if (networkResponse.ok) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
-          }
-        }).catch(() => {/* Offline */});
-        return cachedResponse;
-      }
-      return fetch(event.request);
+      const fetchPromise = fetch(event.request).then((networkResponse) => {
+        if (networkResponse.ok) {
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
+        }
+        return networkResponse;
+      }).catch(() => {/* Offline */});
+
+      return cachedResponse || fetchPromise;
     })
   );
 });
