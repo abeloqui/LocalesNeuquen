@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="description" content="Directorio comunitario de negocios, ferias y servicios de Neuquén. Hecho por vecinos. Filtrá por rubro, horario y barrio. Sin publicidad ni rastreo." />
+  <meta name="description" content="Directorio libre y comunitario de negocios, ferias y servicios de Neuquén. Hecho por vecinos. Sin publicidad ni rastreo." />
   <meta name="color-scheme" content="light dark" />
   <meta name="theme-color" content="#0d5c63" />
   <meta name="theme-color" content="#0d5c63" media="(prefers-color-scheme: light)" />
@@ -11,11 +11,11 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="LocalesNQN" />
+  <meta name="apple-mobile-web-app-title" content="DirLibre NQN" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
-  <title>Locales Neuquén – Negocios, ferias y comercios</title>
+  <title>Directorio Libre Neuquén – Negocios, ferias y servicios</title>
 
   <!-- Leaflet CSS local; si falla, cae al CDN -->
   <link rel="stylesheet" href="leaflet.css"
@@ -575,7 +575,7 @@
       <div class="header-top">
         <div class="logo">
           <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s7-6.2 7-12a7 7 0 10-14 0c0 5.800 7 12 7 12z"/><circle cx="12" cy="10" r="2.500"/></svg></span>
-          <h1>Locales Neuquén</h1>
+          <h1>Directorio Libre Neuquén</h1>
           <small>Negocios · Ferias · Comercios</small>
         </div>
         <div class="search" role="search">
@@ -585,7 +585,7 @@
         </div>
         <div class="header-actions">
           <button type="button" class="btn btn-ocre btn-publicar" id="btn-publicar" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Sumar</button>
-          <button type="button" id="btn-instalar" aria-label="Instalar Locales Neuquén en este dispositivo">
+          <button type="button" id="btn-instalar" aria-label="Instalar Directorio Libre Neuquén en este dispositivo">
             <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M8 11l4 4 4-4"/><path d="M5 19h14"/></svg></span>
             <span class="txt">Instalar</span>
           </button>
@@ -617,7 +617,7 @@
       <div class="lista-scroll" id="lista-scroll">
         <ul class="lista" id="lista-comercios" role="list" aria-busy="true"></ul>
         <div class="pie">
-          <p>Directorio comunitario de Neuquén · Hecho por y para vecinos · Sin publicidad · Sin rastreo · Sin cuentas</p>
+          <p>Directorio Libre Neuquén · Hecho por y para vecinos · Sin publicidad · Sin rastreo · Sin cuentas</p>
           <button type="button" id="btn-comerciante">¿Tenés un local, feria o servicio? Sumalo al mapa</button>
         </div>
       </div>
@@ -769,7 +769,7 @@
      0. CONFIGURACIÓN  (lo único que normalmente hace falta tocar)
      =================================================================== */
   const CONFIG = {
-    nombreApp: 'Locales Neuquén',
+    nombreApp: 'Directorio Libre Neuquén',
     centro: [-38.95, -68.09],
     zoom: 13,
     zonaHoraria: 'America/Argentina/Buenos_Aires',   // Neuquén = UTC-3 sin horario de verano
@@ -1816,7 +1816,7 @@
     exportar() {
       const blob = new Blob([JSON.stringify(Datos.items.map(serializar), null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
-      const a = h('a', { href: url, download: `locales-neuquen-${new Date().toISOString().slice(0, 10)}.json` });
+      const a = h('a', { href: url, download: `dirlibre-nqn-${new Date().toISOString().slice(0, 10)}.json` });
       document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
     },
     async importar(archivo) {

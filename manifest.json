@@ -1,7 +1,7 @@
 {
-  "name": "Locales Neuquén",
-  "short_name": "LocalesNQN",
-  "description": "Directorio comunitario de negocios, ferias y servicios de Neuquén. Hecho por vecinos.",
+  "name": "Directorio Libre Neuquén",
+  "short_name": "DirLibre NQN",
+  "description": "Directorio libre y comunitario de negocios, ferias y servicios de Neuquén. Hecho por vecinos, sin publicidad ni rastreo.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -24,6 +24,10 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["lifestyle", "navigation", "utilities"],
+  "categories": [
+    "lifestyle",
+    "navigation",
+    "utilities"
+  ],
   "prefer_related_applications": false
 }

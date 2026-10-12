@@ -1,4 +1,4 @@
-/* Locales Neuquén – Service Worker
+/* Directorio Libre Neuquén – Service Worker
    Estrategia híbrida, tolerante a fallos, sin frameworks.
    - Estáticos: Cache-First / Stale-While-Revalidate
    - Datos públicos (comercios): Network-First con fallback a caché
@@ -6,7 +6,7 @@
 */
 'use strict';
 
-const VERSION = 'locales-nqn-v1';
+const VERSION = 'dirlibre-nqn-v1';
 const STATIC_CACHE = VERSION + '-static';
 const DATA_CACHE  = VERSION + '-data';
 
@@ -56,7 +56,7 @@ self.addEventListener('activate', (event) => {
     const keys = await caches.keys();
     await Promise.all(
       keys
-        .filter((k) => k.startsWith('locales-nqn-') && k !== STATIC_CACHE && k !== DATA_CACHE)
+        .filter((k) => k.startsWith('dirlibre-nqn-') && k !== STATIC_CACHE && k !== DATA_CACHE)
         .map((k) => caches.delete(k))
     );
     self.clients.claim();
