@@ -1837,8 +1837,9 @@
     if (!Local.persistente) Toast.mostrar('Tu navegador bloquea el almacenamiento: favoritos y cambios no se conservarán.', { ms: 5000 });
     // Registrar Service Worker para soporte offline / PWA
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {
-        /* Silencioso si falla o el entorno no lo soporta */
+      navigator.serviceWorker.register('./sw.js').catch((err) => {
+        console.error('Error registrando SW:', err);
+      });
   }
   iniciar();
 })();
