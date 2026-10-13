@@ -6,7 +6,7 @@
 */
 'use strict';
 
-const VERSION = 'dirlibre-nqn-v1';
+const VERSION = 'dirlibre-nqn-v2';
 const STATIC_CACHE = VERSION + '-static';
 const DATA_CACHE  = VERSION + '-data';
 
