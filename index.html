@@ -1580,7 +1580,7 @@ const CATEGORIAS = [
   const mapasConTiles = new Set();
   /** dueno = objeto con `.map` (Mapa o MapaForm); guarda `.tiles` y recuerda cómo recrearlos. */
   function ponerTiles(dueno, alCrear) {
-    const T = CONFIG.tiles, clave = (cb1_4iqb_1_ace4718fb2503ff28ee72ae7 || '').trim(), osc = temaOscuro();
+    const T = CONFIG.tiles, clave = ('cb1_4iqb_1_ace4718fb2503ff28ee72ae7' || '').trim(), osc = temaOscuro();
     const nuevo = clave
       ? window.L.tileLayer((osc ? T.oscuro : T.claro) + '?key=' + encodeURIComponent(clave), { maxZoom: 19, attribution: T.attribution })
       : window.L.tileLayer(T.osm, { subdomains: 'abc', maxZoom: 19, attribution: T.attributionOsm, className: osc ? 'tiles-invertir' : '' });
