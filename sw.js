@@ -6,7 +6,7 @@
 */
 'use strict';
 
-const VERSION = 'dirlibre-nqn-v2';
+const VERSION = 'dirlibre-nqn-v3';
 const STATIC_CACHE = VERSION + '-static';
 const DATA_CACHE  = VERSION + '-data';
 
@@ -16,6 +16,8 @@ const PRECACHE = [
   './index.html',
   './leaflet.css',
   './leaflet.js',
+  './leaflet.markercluster.js',
+  './MarkerCluster.css',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',

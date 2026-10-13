@@ -21,6 +21,8 @@
   <!-- Leaflet CSS local; si falla, cae al CDN -->
   <link rel="stylesheet" href="leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'" />
+  <!-- Plugin de clústeres, alojado en el repo (opcional: si falta, el mapa muestra pines sueltos) -->
+  <link rel="stylesheet" href="MarkerCluster.css" />
 
   <style>
     /* =========================================================
@@ -77,7 +79,6 @@
         --shadow: 0 6px 24px rgba(0,0,0,.5);
         --shadow-lg: 0 18px 50px rgba(0,0,0,.7);
       }
-      :root:not([data-tema="claro"]) .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.9) saturate(.8); }
       :root:not([data-tema="claro"]) .leaflet-container { background: #16201e; }
     }
     :root[data-tema="oscuro"] {
@@ -98,7 +99,6 @@
         --shadow: 0 6px 24px rgba(0,0,0,.5);
         --shadow-lg: 0 18px 50px rgba(0,0,0,.7);
     }
-    :root[data-tema="oscuro"] .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.9) saturate(.8); }
     :root[data-tema="oscuro"] .leaflet-container { background: #16201e; }
 
     /* =========================================================
@@ -371,7 +371,7 @@
     .badge { font-size: .72rem; font-weight: 700; padding: .22rem .6rem; border-radius: 999px; white-space: nowrap; }
     .badge.abierto { background: var(--ok-bg); color: var(--ok); }
     .badge.pronto  { background: var(--warn-bg); color: var(--warn); }
-    .badge.cerrado { background: var(--bad-bg); color: var(--bad); }
+    .badge.cerrado { background: var(--fill); color: var(--text-2); }   /* gris neutro: solo abierto / por cerrar llaman la atención */
     .detalle { color: var(--text-2); }
     .dist { margin-left: auto; display: inline-flex; align-items: center; gap: .25rem; font-weight: 600; color: var(--text-2); font-variant-numeric: tabular-nums; }
     .dist .ico { width: 1em; height: 1em; }
@@ -593,6 +593,39 @@
     }
     .pie .pie-ajustes button[data-logueado="true"] { color: var(--accent-text); box-shadow: inset 0 0 0 1.5px var(--accent); }
     @media (hover: hover) { .pie .pie-ajustes button:hover { background: var(--fill); } }
+    /* =========================================================
+       9. COMPACTACIÓN, CHIPS DE RUBRO Y CLÚSTERES
+       ========================================================= */
+    /* Tarjetas compactas: ~3 por pantalla en el celular */
+    .lista { gap: .5rem; }
+    .card { padding: .65rem .8rem .6rem; gap: .2rem; }
+    .card-nombre { font-size: 1.05rem; line-height: 1.2; }
+    .card-meta { margin-top: 0; font-size: .78rem; }
+    .cat-ico { width: 1.35rem; height: 1.35rem; margin-right: .35rem; font-size: .78rem; }
+    .fav { width: 36px; height: 36px; margin: -.2rem -.3rem 0 0; }
+    .card-estado { gap: .2rem .45rem; }
+    .card-dir, .card-hoy { font-size: .82rem; line-height: 1.3; }
+    .card-aviso { padding: .35rem .6rem; font-size: .8rem; margin-top: .1rem; }
+    .card-acciones { flex-wrap: nowrap; gap: .35rem; margin-top: .35rem; }
+    .card-acciones .btn { flex: 1 1 0; min-height: 38px; padding: .3rem .5rem; font-size: .82rem; gap: .3rem; }
+    .card-acciones .btn-icono { flex: none; width: 40px; padding: 0; }
+    .card-acciones .btn-icono .ico { width: 1.25em; height: 1.25em; }
+    @media (max-width: 350px) { .card-acciones .btn:not(.btn-icono) .ico { display: none; } }
+    .skeleton { height: 96px; }
+
+    /* Fila de rubros con ícono (reemplaza al select) */
+    .filtros-rubros { padding-bottom: 1px; }
+    .chip-rubro { padding-inline: .7rem; gap: .3rem; }
+    .chip-rubro .e { font-size: 1.05rem; line-height: 1; }
+
+    /* Clústeres de marcadores */
+    .cluster-wrap { background: none; border: none; }
+    .cluster {
+      width: 40px; height: 40px; border-radius: 50%; box-sizing: border-box;
+      display: grid; place-items: center; background: var(--accent); color: #fff;
+      border: 3px solid #fff; box-shadow: 0 3px 10px rgba(0,0,0,.3);
+      font-size: .85rem; font-weight: 700; font-variant-numeric: tabular-nums;
+    }
   </style>
 </head>
 <body>
@@ -619,10 +652,10 @@
           </button>
         </div>
       </div>
+      <div class="filtros filtros-rubros" role="group" aria-label="Filtrar por rubro" id="rubros"></div>
       <div class="filtros" role="group" aria-label="Filtros del listado" id="filtros">
         <button type="button" class="chip" id="chip-cerca" aria-pressed="false"></button>
         <button type="button" class="chip" id="chip-favs" aria-pressed="false"></button>
-        <label class="sr-only" for="f-rubro">Rubro</label><select id="f-rubro"></select>
         <label class="sr-only" for="f-horario">Horario</label><select id="f-horario"></select>
         <label class="sr-only" for="f-barrio">Barrio</label><select id="f-barrio"></select>
         <label class="sr-only" for="f-tipo">Tipo</label><select id="f-tipo"></select>
@@ -808,9 +841,12 @@
     whatsappAdmin: '',                                 // ej. '5492991234567' para el botón "Publicá tu espacio"
     umbralCierraPronto: 45,                            // minutos
     leaflet: { local: 'leaflet.js', cdn: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js' },
-    tiles: {
-      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    cluster: { js: 'leaflet.markercluster.js' },       // plugin alojado en el repo (CSP); si falta, pines sueltos
+    tiles: {                                           // CARTO Positron / Dark Matter (img-src: *.basemaps.cartocdn.com)
+      claro:  'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+      oscuro: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+      subdominios: 'abcd',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
     },
     claves: { datos: 'locales_neuquen_comercios', favoritos: 'locales_neuquen_favoritos', sesion: 'locales_neuquen_admin' }
   };
@@ -1439,8 +1475,8 @@ const CATEGORIAS = [
     const a = h('div', { class: 'card-acciones' });
     if (verEnMapa && Mapa.listo) a.append(h('button', { type: 'button', class: 'btn btn-tint', dataset: { act: 'ver', id: c.id } }, ico('map'), 'Ver en mapa'));
     a.append(h('a', { class: 'btn btn-gris', href: urlRuta(c), target: '_blank', rel: 'noopener noreferrer', 'aria-label': `Cómo llegar a ${c.nombre}` }, ico('route'), 'Cómo llegar'));
-    a.append(h('button', { type: 'button', class: 'btn btn-gris', dataset: { act: 'compartir', id: c.id }, 'aria-label': `Compartir ${c.nombre} por WhatsApp` }, ico('share'), 'Compartir'));
-    if (c.telefono) a.append(h('a', { class: 'btn btn-primario', href: urlWaContacto(c), target: '_blank', rel: 'noopener noreferrer', 'aria-label': `Escribir por WhatsApp a ${c.nombre}` }, ico('chat'), 'WhatsApp'));
+    if (c.telefono) a.append(h('a', { class: 'btn btn-primario btn-icono', href: urlWaContacto(c), target: '_blank', rel: 'noopener noreferrer', title: 'Escribir por WhatsApp', 'aria-label': `Escribir por WhatsApp a ${c.nombre}` }, ico('chat')));
+    a.append(h('button', { type: 'button', class: 'btn btn-gris btn-icono', dataset: { act: 'compartir', id: c.id }, title: 'Compartir', 'aria-label': `Compartir ${c.nombre} por WhatsApp` }, ico('share')));
     if (fav) a.append(botonFav(c));
     return a;
   }
@@ -1529,6 +1565,35 @@ const CATEGORIAS = [
     return false;
   }
 
+  /* Mosaicos claros u oscuros según el tema (automático o forzado); se cambian en vivo sin recargar */
+  const temaOscuro = () => {
+    const t = document.documentElement.dataset.tema;
+    return t === 'oscuro' || (t !== 'claro' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  };
+  const mapasConTiles = new Set();
+  /** dueno = objeto con `.map` (Mapa o MapaForm); guarda `.tiles` y recuerda cómo recrearlos. */
+  function ponerTiles(dueno, alCrear) {
+    const nuevo = window.L.tileLayer(temaOscuro() ? CONFIG.tiles.oscuro : CONFIG.tiles.claro,
+      { subdomains: CONFIG.tiles.subdominios, maxZoom: 19, attribution: CONFIG.tiles.attribution });
+    if (alCrear) alCrear(nuevo);
+    nuevo.addTo(dueno.map);
+    if (dueno.tiles) dueno.tiles.remove();
+    dueno.tiles = nuevo; dueno._osc = temaOscuro(); dueno._alCrear = alCrear;
+    mapasConTiles.add(dueno);
+  }
+  function resincronizarTiles() {
+    for (const d of mapasConTiles) if (d.map && d._osc !== temaOscuro()) ponerTiles(d, d._alCrear);
+  }
+  {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', resincronizarTiles); else if (mq.addListener) mq.addListener(resincronizarTiles);
+    new MutationObserver(resincronizarTiles).observe(document.documentElement, { attributes: true, attributeFilter: ['data-tema'] });
+  }
+  async function cargarCluster() {
+    if (window.L?.markerClusterGroup) return;
+    try { await cargarScript(CONFIG.cluster.js); } catch { /* sin plugin: marcadores sueltos */ }
+  }
+
   const Mapa = {
     listo: false, map: null, capa: null, cache: new Map(), yo: null, pend: null, tilesError: 0, ro: null,
     visible() { const e = $('#map'); return !!e && e.clientWidth > 0 && e.clientHeight > 0; },
@@ -1544,6 +1609,7 @@ const CATEGORIAS = [
       this.estado('carga', 'Cargando mapa…');
       const ok = await cargarLeaflet();
       if (!ok) return this.fallar();
+      await cargarCluster();
       try { this.iniciar(); } catch (err) { console.error('Leaflet falló al iniciar:', err); this.fallar(); }
     },
     fallar() {
@@ -1563,13 +1629,18 @@ const CATEGORIAS = [
       $('#app').classList.remove('sin-mapa');
       this.map = L.map('map', { center: CONFIG.centro, zoom: CONFIG.zoom, zoomControl: false, zoomSnap: 0.5 });
       L.control.zoom({ position: 'topright', zoomInTitle: 'Acercar', zoomOutTitle: 'Alejar' }).addTo(this.map);
-      const tiles = L.tileLayer(CONFIG.tiles.url, { maxZoom: 19, attribution: CONFIG.tiles.attribution });
-      tiles.on('tileload', () => { if (this.tilesError) { this.tilesError = 0; this.estado(null); } });
-      tiles.on('tileerror', () => {
-        if (++this.tilesError === 6) this.estado('aviso', 'No se pudieron cargar los mosaicos del mapa. Los comercios siguen en el listado.');
+      ponerTiles(this, (tiles) => {
+        tiles.on('tileload', () => { if (this.tilesError) { this.tilesError = 0; this.estado(null); } });
+        tiles.on('tileerror', () => {
+          if (++this.tilesError === 6) this.estado('aviso', 'No se pudieron cargar los mosaicos del mapa. Los comercios siguen en el listado.');
+        });
       });
-      tiles.addTo(this.map);
-      this.capa = L.layerGroup().addTo(this.map);
+      this.capa = (L.markerClusterGroup
+        ? L.markerClusterGroup({
+            showCoverageOnHover: false, maxClusterRadius: 40, animate: !movReducido(),
+            iconCreateFunction: (cl) => L.divIcon({ className: 'cluster-wrap', html: `<div class="cluster">${cl.getChildCount()}</div>`, iconSize: [40, 40] })
+          })
+        : L.layerGroup()).addTo(this.map);
       this.map.on('popupopen', (e) => {
         const el = e.popup.getElement();
         if (el && !el._ligado) { el._ligado = true; el.addEventListener('click', alAccion); }
@@ -1650,7 +1721,11 @@ const CATEGORIAS = [
       if (!rec || !c) return;
       this.map.invalidateSize({ pan: false });
       const ll = [c.lat, c.lng], zoom = Math.max(this.map.getZoom(), 16);
-      const abrir = () => { if (popup && !rec.marker.isPopupOpen()) rec.marker.openPopup(); };
+      const abrir = () => {
+        if (!popup || rec.marker.isPopupOpen()) return;
+        if (this.capa.zoomToShowLayer && !this.map.hasLayer(rec.marker)) this.capa.zoomToShowLayer(rec.marker, () => rec.marker.openPopup());   // pin dentro de un clúster
+        else rec.marker.openPopup();
+      };
       const cerca = this.map.getCenter().distanceTo(ll) < 5 && this.map.getZoom() >= 16;
       if (cerca || movReducido()) { this.map.setView(ll, zoom, { animate: false }); abrir(); return; }
       this.map.once('moveend', abrir);
@@ -1685,9 +1760,22 @@ const CATEGORIAS = [
     setTxt($('#hora-actual'), 'Ahora ' + fmtMin(t.min));
     $('#btn-limpiar').hidden = !hayFiltros();
     actualizarChips();
+    actualizarRubros();
     $$('.filtros select').forEach(s => s.classList.toggle('activo', s.value !== ''));
     if (encuadrar) Mapa.encuadrar(filtrados);
     return filtrados;
+  }
+  /** Fila de rubros: solo los que existen en el directorio, del más al menos poblado (orden fijo, no salta al filtrar). */
+  function renderRubros() {
+    const cont = $('#rubros'); if (!cont) return;
+    const n = new Map();
+    for (const c of Datos.items) n.set(c.categoria, (n.get(c.categoria) || 0) + 1);
+    const lista = CATEGORIAS.map(([k]) => k).filter(k => n.has(k) || k === Estado.rubro).sort((a, b) => (n.get(b) || 0) - (n.get(a) || 0));
+    reemplazar(cont, lista.map(k => h('button', { type: 'button', class: 'chip chip-rubro', dataset: { rubro: k }, title: CAT_LABEL.get(k), 'aria-pressed': String(Estado.rubro === k) },
+      h('span', { class: 'e', 'aria-hidden': 'true' }, iconoCat(k)), k)));
+  }
+  function actualizarRubros() {
+    $$('#rubros .chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.rubro === Estado.rubro)));
   }
   function actualizarChips() {
     const cerca = $('#chip-cerca'), fav = $('#chip-favs');
@@ -1714,7 +1802,7 @@ const CATEGORIAS = [
   function limpiarFiltros() {
     Object.assign(Estado, { q: '', rubro: '', horario: '', tipo: '', barrio: '', soloFavs: false });
     $('#busqueda').value = '';
-    ['rubro', 'horario', 'barrio', 'tipo'].forEach(k => { $('#f-' + k).value = ''; });
+    ['horario', 'barrio', 'tipo'].forEach(k => { $('#f-' + k).value = ''; });
     refrescar({ encuadrar: true });
   }
 
@@ -1752,7 +1840,7 @@ const CATEGORIAS = [
     return [...BARRIOS, ...extra];
   }
   function poblarSelects() {
-    poblarSelect($('#f-rubro'), CATEGORIAS, 'Todos los rubros');
+    renderRubros();
     poblarSelect($('#f-horario'), FRANJAS.slice(1), FRANJAS[0][1]);
     poblarSelect($('#f-barrio'), barriosActuales().map(b => [b, b]), 'Toda la ciudad');
     poblarSelect($('#f-tipo'), Object.entries(TIPOS), 'Todos los tipos');
@@ -1792,7 +1880,7 @@ const CATEGORIAS = [
       wrap.hidden = false;
       if (!this.map) {
         this.map = window.L.map('c-mapa', { zoomControl: true }).setView(CONFIG.centro, 14);
-        window.L.tileLayer(CONFIG.tiles.url, { maxZoom: 19, attribution: CONFIG.tiles.attribution }).addTo(this.map);
+        ponerTiles(this);
         this.map.on('click', e => this.poner(e.latlng.lat, e.latlng.lng, false));
       }
       if (!this.enlazado) { this.enlazado = true; ['c-lat', 'c-lng'].forEach(id => $('#' + id).addEventListener('change', () => this.desdeInputs())); }
@@ -1945,9 +2033,15 @@ const CATEGORIAS = [
     const buscar = debounce(() => { Estado.q = q.value; refrescar({ encuadrar: true }); }, 140);
     q.addEventListener('input', buscar);
     q.addEventListener('search', buscar);
-    for (const k of ['rubro', 'horario', 'barrio', 'tipo']) {
+    for (const k of ['horario', 'barrio', 'tipo']) {
       $('#f-' + k).addEventListener('change', e => { Estado[k] = e.target.value; refrescar({ encuadrar: true }); });
     }
+    $('#rubros').addEventListener('click', (e) => {          // un toque activa el rubro; otro toque en el mismo lo quita
+      const b = e.target.closest('[data-rubro]'); if (!b) return;
+      Estado.rubro = Estado.rubro === b.dataset.rubro ? '' : b.dataset.rubro;
+      refrescar({ encuadrar: true });
+      if (Estado.rubro) b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: movReducido() ? 'auto' : 'smooth' });
+    });
     $('#chip-favs').addEventListener('click', () => { Estado.soloFavs = !Estado.soloFavs; refrescar({ encuadrar: true }); });
     $('#chip-cerca').addEventListener('click', alternarCerca);
     $('#btn-limpiar').addEventListener('click', limpiarFiltros);
