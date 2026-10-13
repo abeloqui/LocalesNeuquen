@@ -618,6 +618,9 @@
     .chip-rubro { padding-inline: .7rem; gap: .3rem; }
     .chip-rubro .e { font-size: 1.05rem; line-height: 1; }
 
+    /* Sin clave de CARTO: mosaicos de OpenStreetMap, oscurecidos con filtro */
+    .tiles-invertir { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.9) saturate(.8); }
+
     /* Clústeres de marcadores */
     .cluster-wrap { background: none; border: none; }
     .cluster {
@@ -842,11 +845,15 @@
     umbralCierraPronto: 45,                            // minutos
     leaflet: { local: 'leaflet.js', cdn: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js' },
     cluster: { js: 'leaflet.markercluster.js' },       // plugin alojado en el repo (CSP); si falta, pines sueltos
-    tiles: {                                           // CARTO Positron / Dark Matter (img-src: *.basemaps.cartocdn.com)
-      claro:  'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-      oscuro: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-      subdominios: 'abcd',
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    tiles: {
+      // Clave GRATUITA de CARTO (carto.com/basemaps/apikey, sin cuenta). Con clave: Positron / Dark Matter.
+      // Vacía: se usa OpenStreetMap y el modo oscuro se logra con un filtro CSS (img-src: basemaps.cartocdn.com y *.tile.openstreetmap.org).
+      clave: '',
+      claro:  'https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png',
+      oscuro: 'https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png',
+      osm: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      attributionOsm: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     },
     claves: { datos: 'locales_neuquen_comercios', favoritos: 'locales_neuquen_favoritos', sesion: 'locales_neuquen_admin' }
   };
@@ -1573,8 +1580,10 @@ const CATEGORIAS = [
   const mapasConTiles = new Set();
   /** dueno = objeto con `.map` (Mapa o MapaForm); guarda `.tiles` y recuerda cómo recrearlos. */
   function ponerTiles(dueno, alCrear) {
-    const nuevo = window.L.tileLayer(temaOscuro() ? CONFIG.tiles.oscuro : CONFIG.tiles.claro,
-      { subdomains: CONFIG.tiles.subdominios, maxZoom: 19, attribution: CONFIG.tiles.attribution });
+    const T = CONFIG.tiles, clave = (T.clave || '').trim(), osc = temaOscuro();
+    const nuevo = clave
+      ? window.L.tileLayer((osc ? T.oscuro : T.claro) + '?key=' + encodeURIComponent(clave), { maxZoom: 19, attribution: T.attribution })
+      : window.L.tileLayer(T.osm, { subdomains: 'abc', maxZoom: 19, attribution: T.attributionOsm, className: osc ? 'tiles-invertir' : '' });
     if (alCrear) alCrear(nuevo);
     nuevo.addTo(dueno.map);
     if (dueno.tiles) dueno.tiles.remove();
